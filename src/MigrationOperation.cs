@@ -1,9 +1,16 @@
+using System.Collections.Generic;
+
 namespace SqlMigrationLint;
 
 public abstract record MigrationOperation
 {
     public string? File { get; init; }
     public int? Line { get; init; }
+}
+
+public sealed record SqlOperation : MigrationOperation
+{
+    public string Sql { get; init; } = string.Empty;
 }
 
 public sealed record AddColumnOperation : MigrationOperation
