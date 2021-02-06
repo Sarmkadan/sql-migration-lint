@@ -3,14 +3,44 @@ using System.Text.RegularExpressions;
 
 namespace SqlMigrationLint
 {
+    /// <summary>
+    /// Represents a SQL migration file.
+    /// </summary>
     public class MigrationFile
     {
+        /// <summary>
+        /// Gets the file path of the migration file.
+        /// </summary>
         public string FilePath { get; }
+
+        /// <summary>
+        /// Gets the name of the migration.
+        /// </summary>
         public string MigrationName { get; }
+
+        /// <summary>
+        /// Gets the lines of the migration file.
+        /// </summary>
         public string[] Lines { get; }
+
+        /// <summary>
+        /// Gets the Up body of the migration.
+        /// </summary>
         public string UpBody { get; }
+
+        /// <summary>
+        /// Gets the Down body of the migration.
+        /// </summary>
         public string DownBody { get; }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MigrationFile"/> class.
+        /// </summary>
+        /// <param name="filePath">The file path of the migration file.</param>
+        /// <param name="migrationName">The name of the migration.</param>
+        /// <param name="lines">The lines of the migration file.</param>
+        /// <param name="upBody">The Up body of the migration.</param>
+        /// <param name="downBody">The Down body of the migration.</param>
         private MigrationFile(string filePath, string migrationName, string[] lines, string upBody, string downBody)
         {
             FilePath = filePath;
@@ -20,6 +50,11 @@ namespace SqlMigrationLint
             DownBody = downBody;
         }
 
+        /// <summary>
+        /// Tries to parse a migration file from the specified file path.
+        /// </summary>
+        /// <param name="filePath">The file path of the migration file.</param>
+        /// <returns>A <see cref="MigrationFile"/> instance if the file is a valid migration, otherwise null.</returns>
         public static MigrationFile? TryParse(string filePath)
         {
             string[] lines = System.IO.File.ReadAllLines(filePath);
@@ -72,6 +107,12 @@ namespace SqlMigrationLint
             return new MigrationFile(filePath, migrationName, lines, upBody, downBody);
         }
 
+        /// <summary>
+        /// Checks if the specified lines represent a migration.
+        /// </summary>
+        /// <param name="lines">The lines to check.</param>
+        /// <param name="migrationName">The name of the migration.</param>
+        /// <returns>True if the lines represent a migration, otherwise false.</returns>
         private static bool IsMigration(string[] lines, out string migrationName)
         {
             migrationName = null;
