@@ -1,0 +1,158 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+
+namespace SqlMigrationLint;
+
+/// <summary>
+/// Orchestrates linting of migration files using a set of <see cref="ILintRule"/> implementations.
+/// </summary>
+public sealed class MigrationLinter
+{
+    private readonly IReadOnlyList<ILintRule> _rules;
+
+    /// <summary>
+    /// Creates a new <see cref="MigrationLinter"/> with the supplied rules.
+    /// </summary>
+    /// <param name="rules">The collection of lint rules to apply.</param>
+    public MigrationLinter(IEnumerable<ILintRule> rules)
+    {
+        if (rules is null) throw new ArgumentNullException(nameof(rules));
+        _rules = rules.ToArray();
+    }
+
+    /// <summary>
+    /// Creates a <see cref="MigrationLinter"/> pre‑populated with all built‑in rules.
+    /// </summary>
+    public static MigrationLinter CreateDefault()
+    {
+        var allRules = new List<ILintRule>();
+        allRules.AddRange(DestructiveOperationRules.All);
+        allRules.AddRange(LockHeavyOperationRules.All);
+        allRules.Add(EmptyDownRule.Instance);
+        return new MigrationLinter(allRules);
+    }
+
+    /// <summary>
+    /// Lints all migration files under <c>/Migrations</c> relative to <paramref name="rootPath"/>.
+    /// </summary>
+    /// <param name="rootPath">The directory that contains the <c>Migrations</c> folder.</param>
+    /// <returns>A report describing the findings.</returns>
+    public LintReport Lint(string rootPath)
+    {
+        if (string.IsNullOrWhiteSpace(rootPath))
+            throw new ArgumentException("Root path must be provided.", nameof(rootPath));
+
+        var migrationsFolder = Path.Combine(rootPath, "Migrations");
+        if (!Directory.Exists(migrationsFolder))
+            throw new DirectoryNotFoundException($"Migrations folder not found: {migrationsFolder}");
+
+        // Find *.cs files, excluding Designer files and snapshot files.
+        var migrationFiles = Directory.EnumerateFiles(
+                migrationsFolder,
+                "*.cs",
+                SearchOption.AllDirectories)
+            .Where(f => !f.EndsWith(".Designer.cs", StringComparison.OrdinalIgnoreCase))
+            .Where(f => !Path.GetFileName(f).Contains("Snapshot", StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+
+        var findings = new List<LintFinding>();
+        int migrationsScanned = 0;
+
+        foreach (var file in migrationFiles)
+        {
+            var migrationFile = MigrationFile.TryParse(file);
+            if (migrationFile is null)
+                continue;
+
+            migrationsScanned++;
+
+            // Build a generic SqlOperation that represents the Up body of the migration.
+            var sqlOperation = new SqlOperation
+            {
+                File = file,
+                Line = 1,
+                Sql = migrationFile.UpBody ?? string.Empty
+            };
+
+            foreach (var rule in _rules)
+            {
+                if (rule.AppliesTo(sqlOperation))
+                {
+                    var result = rule.Evaluate(sqlOperation);
+                    if (result is not null)
+                        findings.Add(result);
+                }
+            }
+        }
+
+        bool hasBlockers = findings.Any(f => f.Severity == LintSeverity.Blocker);
+        RiskLevel maxRisk = RiskLevel.None;
+
+        foreach (var f in findings)
+        {
+            var level = f.Severity switch
+            {
+                LintSeverity.Blocker => RiskLevel.Blocker,
+                LintSeverity.Danger => RiskLevel.Danger,
+                LintSeverity.Warning => RiskLevel.Warning,
+                _ => RiskLevel.None
+            };
+
+            if (level > maxRisk)
+                maxRisk = level;
+        }
+
+        return new LintReport(findings, migrationsScanned, hasBlockers, maxRisk);
+    }
+}
+
+/// <summary>
+/// Represents the result of a lint run.
+/// </summary>
+public sealed class LintReport
+{
+    /// <summary>
+    /// All findings produced by the lint run.
+    /// </summary>
+    public IReadOnlyList<LintFinding> Findings { get; }
+
+    /// <summary>
+    /// Number of migration files that were examined.
+    /// </summary>
+    public int MigrationsScanned { get; }
+
+    /// <summary>
+    /// Whether any blocker‑severity findings were reported.
+    /// </summary>
+    public bool HasBlockers { get; }
+
+    /// <summary>
+    /// The highest risk level observed among the findings.
+    /// </summary>
+    public RiskLevel MaxRisk { get; }
+
+    public LintReport(
+        IReadOnlyList<LintFinding> findings,
+        int migrationsScanned,
+        bool hasBlockers,
+        RiskLevel maxRisk)
+    {
+        Findings = findings ?? throw new ArgumentNullException(nameof(findings));
+        MigrationsScanned = migrationsScanned;
+        HasBlockers = hasBlockers;
+        MaxRisk = maxRisk;
+    }
+}
+
+/// <summary>
+/// Represents the severity levels used for the <see cref="LintReport.MaxRisk"/> calculation.
+/// </summary>
+public enum RiskLevel
+{
+    None = 0,
+    Warning = 1,
+    Danger = 2,
+    Blocker = 3
+}
