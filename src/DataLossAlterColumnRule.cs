@@ -124,7 +124,7 @@ internal sealed class DataLossAlterColumnRule : ILintRule
             var newMatch = Regex.Match(newType, @"decimal\((\d+),\s*\d+\)");
 
             if (oldMatch.Success && newMatch.Success &&
-                int.Parse(oldMatch.Groups[1].Value) > int.Parse(newMatch.Groups[1].Value))
+                int.Parse(oldMatch.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture) > int.Parse(newMatch.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture))
             {
                 return true;
             }

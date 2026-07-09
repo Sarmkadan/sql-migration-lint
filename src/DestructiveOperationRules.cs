@@ -203,7 +203,7 @@ public static class DestructiveOperationRules
                 return null;
             }
 
-            var match = Regex.Match(sqlOp.Sql, @"(DELETE|TRUNCATE)\s+FROM\s+[^;]+;", RegexOptions.IgnoreCase);
+            var match = Regex.Match(sqlOp.Sql, @"(DELETE\s+FROM|TRUNCATE(?:\s+TABLE)?)\s+[^;]+;", RegexOptions.IgnoreCase);
             if (match.Success)
             {
                 return new LintFinding(

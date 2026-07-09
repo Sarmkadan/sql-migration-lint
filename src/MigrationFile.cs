@@ -24,14 +24,14 @@ namespace SqlMigrationLint
         public string[] Lines { get; }
 
         /// <summary>
-        /// Gets the Up body of the migration.
+        /// Gets the Up body of the migration, or null if no Up method body could be located.
         /// </summary>
-        public string UpBody { get; }
+        public string? UpBody { get; }
 
         /// <summary>
-        /// Gets the Down body of the migration.
+        /// Gets the Down body of the migration, or null if no Down method body could be located.
         /// </summary>
-        public string DownBody { get; }
+        public string? DownBody { get; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MigrationFile"/> class.
@@ -41,7 +41,8 @@ namespace SqlMigrationLint
         /// <param name="lines">The lines of the migration file.</param>
         /// <param name="upBody">The Up body of the migration.</param>
         /// <param name="downBody">The Down body of the migration.</param>
-        private MigrationFile(string filePath, string migrationName, string[] lines, string upBody, string downBody)
+        [System.Text.Json.Serialization.JsonConstructor]
+        public MigrationFile(string filePath, string migrationName, string[] lines, string? upBody, string? downBody)
         {
             FilePath = filePath;
             MigrationName = migrationName;
@@ -58,9 +59,9 @@ namespace SqlMigrationLint
         public static MigrationFile? TryParse(string filePath)
         {
             string[] lines = System.IO.File.ReadAllLines(filePath);
-            string migrationName = null;
-            string upBody = null;
-            string downBody = null;
+            string? migrationName;
+            string? upBody = null;
+            string? downBody = null;
 
             if (!IsMigration(lines, out migrationName))
                 return null;
@@ -113,7 +114,7 @@ namespace SqlMigrationLint
         /// <param name="lines">The lines to check.</param>
         /// <param name="migrationName">The name of the migration.</param>
         /// <returns>True if the lines represent a migration, otherwise false.</returns>
-        private static bool IsMigration(string[] lines, out string migrationName)
+        private static bool IsMigration(string[] lines, [System.Diagnostics.CodeAnalysis.NotNullWhen(true)] out string? migrationName)
         {
             migrationName = null;
             foreach (string line in lines)

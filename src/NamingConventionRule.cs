@@ -12,7 +12,7 @@ public sealed class NamingConventionRule : ILintRule
     private readonly string _pkPrefix;
     private readonly string _uqPrefix;
 
-    public string Name => "ML101";
+    public string Name => "ML102";
     public string Description => "Checks that database objects (indexes, foreign keys, primary keys, unique constraints) follow naming conventions.";
     public LintSeverity Severity => LintSeverity.Warning;
 
