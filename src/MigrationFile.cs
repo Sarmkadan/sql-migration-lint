@@ -73,39 +73,75 @@ namespace SqlMigrationLint
 
             for (int i = 0; i < lines.Length; i++)
             {
-                if (lines[i].Contains("Up(MigrationBuilder builder)"))
+                // EF Core scaffolds "void Up(MigrationBuilder migrationBuilder)"; match any parameter name.
+                if (Regex.IsMatch(lines[i], @"\bUp\s*\(\s*MigrationBuilder\b"))
                 {
                     upStartIndex = i;
-                    for (int j = i + 1; j < lines.Length; j++)
-                    {
-                        if (lines[j].Trim().StartsWith("}"))
-                        {
-                            upEndIndex = j;
-                            break;
-                        }
-                    }
+                    upEndIndex = FindMethodEnd(lines, i);
                 }
-                else if (lines[i].Contains("Down(MigrationBuilder builder)"))
+                else if (Regex.IsMatch(lines[i], @"\bDown\s*\(\s*MigrationBuilder\b"))
                 {
                     downStartIndex = i;
-                    for (int j = i + 1; j < lines.Length; j++)
-                    {
-                        if (lines[j].Trim().StartsWith("}"))
-                        {
-                            downEndIndex = j;
-                            break;
-                        }
-                    }
+                    downEndIndex = FindMethodEnd(lines, i);
                 }
             }
 
             if (upStartIndex != -1 && upEndIndex != -1)
-                upBody = string.Join(Environment.NewLine, lines, upStartIndex + 1, upEndIndex - upStartIndex - 1);
+                upBody = ExtractBody(lines, upStartIndex, upEndIndex);
 
             if (downStartIndex != -1 && downEndIndex != -1)
-                downBody = string.Join(Environment.NewLine, lines, downStartIndex + 1, downEndIndex - downStartIndex - 1);
+                downBody = ExtractBody(lines, downStartIndex, downEndIndex);
 
             return new MigrationFile(filePath, migrationName, lines, upBody, downBody);
+        }
+
+        /// <summary>
+        /// Extracts the method body between the signature line and the closing brace,
+        /// excluding a standalone opening-brace line so that an empty method yields
+        /// an empty (whitespace-only) body.
+        /// </summary>
+        private static string ExtractBody(string[] lines, int startIndex, int endIndex)
+        {
+            int bodyStart = startIndex + 1;
+            if (bodyStart < endIndex && lines[bodyStart].Trim() == "{")
+                bodyStart++;
+
+            return string.Join(Environment.NewLine, lines, bodyStart, Math.Max(0, endIndex - bodyStart));
+        }
+
+        /// <summary>
+        /// Finds the line index of the closing brace that ends the method starting at
+        /// <paramref name="startIndex"/>, using brace-depth tracking so nested blocks
+        /// (e.g. <c>table => new { ... }</c> lambdas inside CreateTable) do not
+        /// terminate the body early.
+        /// </summary>
+        /// <param name="lines">All lines of the file.</param>
+        /// <param name="startIndex">Index of the method signature line.</param>
+        /// <returns>The index of the method's closing brace line, or -1 if not found.</returns>
+        private static int FindMethodEnd(string[] lines, int startIndex)
+        {
+            int depth = 0;
+            bool opened = false;
+
+            for (int i = startIndex; i < lines.Length; i++)
+            {
+                foreach (char c in lines[i])
+                {
+                    if (c == '{')
+                    {
+                        depth++;
+                        opened = true;
+                    }
+                    else if (c == '}')
+                    {
+                        depth--;
+                        if (opened && depth == 0)
+                            return i;
+                    }
+                }
+            }
+
+            return -1;
         }
 
         /// <summary>
