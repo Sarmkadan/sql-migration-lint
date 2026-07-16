@@ -30,3 +30,7 @@ if (operation.TableExists && !operation.IsNullable)
 }
 ```
 
+
+## Architecture
+
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the component breakdown, data flow, rule catalog (including which rules are registered by default), extension points, and known limitations.
