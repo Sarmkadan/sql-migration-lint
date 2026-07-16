@@ -20,10 +20,13 @@ public static class GitHubAnnotationsWriter
             _ => "notice"
         };
 
-        var filePart = finding.File is null ? "" : $"file={finding.File},line={finding.Line ?? 0}";
         var message = finding.Message.Replace("\n", " ").Replace("\r", " ");
 
-        return $"::{severityPrefix} {filePart}::{message}";
+        // "::error ::msg" (space, no parameters) is not a valid workflow command;
+        // omit the space entirely when there is no file to attach.
+        return finding.File is null
+            ? $"::{severityPrefix}::{message}"
+            : $"::{severityPrefix} file={finding.File},line={finding.Line ?? 0}::{message}";
     }
 
     /// <summary>
