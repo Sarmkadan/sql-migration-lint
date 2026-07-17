@@ -24,6 +24,7 @@ namespace SqlMigrationLint
         /// <param name="indented">Whether to format the JSON with indentation.</param>
         /// <returns>A JSON string representation of the migration file.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is null.</exception>
+        /// <exception cref="JsonException">Thrown when serialization fails.</exception>
         public static string ToJson(this MigrationFile value, bool indented = false)
         {
             ArgumentNullException.ThrowIfNull(value);
@@ -41,6 +42,7 @@ namespace SqlMigrationLint
         /// <param name="json">The JSON string to deserialize.</param>
         /// <returns>A <see cref="MigrationFile"/> instance if deserialization succeeds, otherwise null.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="json"/> is null.</exception>
+        /// <exception cref="JsonException">Thrown when deserialization fails.</exception>
         public static MigrationFile? FromJson(string json)
         {
             ArgumentNullException.ThrowIfNull(json);
