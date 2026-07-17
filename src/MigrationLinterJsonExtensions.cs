@@ -6,6 +6,10 @@ namespace SqlMigrationLint;
 /// <summary>
 /// Provides System.Text.Json serialization helpers for <see cref="MigrationLinter"/>.
 /// </summary>
+/// <remarks>
+/// This static class offers extension methods for serializing and deserializing <see cref="MigrationLinter"/> instances
+/// to and from JSON format, supporting both compact and indented output.
+/// </remarks>
 public static class MigrationLinterJsonExtensions
 {
     private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web)
@@ -16,11 +20,11 @@ public static class MigrationLinterJsonExtensions
     };
 
     /// <summary>
-    /// Serializes a <see cref="MigrationLinter"/> instance to a JSON string.
+    /// Serializes a <see cref="MigrationLinter"/> instance to a JSON string using camelCase property naming.
     /// </summary>
-    /// <param name="value">The <see cref="MigrationLinter"/> instance to serialize.</param>
+    /// <param name="value">The <see cref="MigrationLinter"/> instance to serialize. Must not be <see langword="null"/>.</param>
     /// <param name="indented">Whether to format the JSON with indentation for readability.</param>
-    /// <returns>A JSON string representation of the <see cref="MigrationLinter"/>.</returns>
+    /// <returns>A JSON string representation of the <see cref="MigrationLinter"/> using camelCase property names.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is <see langword="null"/>.</exception>
     public static string ToJson(this MigrationLinter value, bool indented = false)
     {
@@ -36,11 +40,11 @@ public static class MigrationLinterJsonExtensions
     /// <summary>
     /// Deserializes a JSON string to a <see cref="MigrationLinter"/> instance.
     /// </summary>
-    /// <param name="json">The JSON string to deserialize.</param>
-    /// <returns>A <see cref="MigrationLinter"/> instance populated from the JSON data.</returns>
+    /// <param name="json">The JSON string to deserialize. Must not be <see langword="null"/>, empty, or whitespace.</param>
+    /// <returns>A <see cref="MigrationLinter"/> instance populated from the JSON data, or <see langword="null"/> if the JSON represents a null value.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="json"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is empty or whitespace.</exception>
-    /// <exception cref="JsonException">Thrown when the JSON is invalid or cannot be deserialized.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is empty or consists only of whitespace.</exception>
+    /// <exception cref="JsonException">Thrown when the JSON is invalid or cannot be deserialized into a <see cref="MigrationLinter"/> instance.</exception>
     public static MigrationLinter? FromJson(string json)
     {
         ArgumentNullException.ThrowIfNull(json);
@@ -52,11 +56,11 @@ public static class MigrationLinterJsonExtensions
     /// <summary>
     /// Attempts to deserialize a JSON string to a <see cref="MigrationLinter"/> instance.
     /// </summary>
-    /// <param name="json">The JSON string to deserialize.</param>
+    /// <param name="json">The JSON string to deserialize. Must not be <see langword="null"/>, empty, or whitespace.</param>
     /// <param name="value">Receives the deserialized <see cref="MigrationLinter"/> instance if successful; otherwise, <see langword="null"/>.</param>
     /// <returns><see langword="true"/> if deserialization succeeds; otherwise, <see langword="false"/>.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="json"/> is <see langword="null"/>.</exception>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is empty or whitespace.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is empty or consists only of whitespace.</exception>
     public static bool TryFromJson(string json, out MigrationLinter? value)
     {
         ArgumentNullException.ThrowIfNull(json);
