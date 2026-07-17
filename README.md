@@ -65,6 +65,70 @@ class Program
 }
 ```
 
+## MigrationFileExtensions
+
+`MigrationFileExtensions` provides a collection of extension methods for `MigrationFile` that simplify common operations on migration files, such as counting lines, extracting SQL statements, checking for body content, and analyzing file metadata. These methods help you quickly inspect migration files without manually parsing their structure.
+
+Example usage:
+
+```csharp
+using System;
+using System.IO;
+using SqlMigrationLint;
+
+class Program
+{
+    static void Main()
+    {
+        // Assume we have a migration file
+        var migrationFile = new MigrationFile(
+            filePath: Path.Combine("Migrations", "0001_CreateUserTable.cs"),
+            name: "CreateUserTable",
+            upBody: "migration.CreateTable(\n                name: \"Users\",
+                columns: table => new
+                {\n                    table.Column<Guid>(name: \"Id\");
+                    table.Column<string>(name: \"Email\", nullable: false);
+                });",
+            downBody: "migration.DropTable(\"Users\");"
+        );
+
+        // Use extension methods to analyze the migration
+        Console.WriteLine($"File: {migrationFile.GetFileNameWithoutExtension()}");
+        Console.WriteLine($"Total lines: {migrationFile.GetLineCount()}");
+        Console.WriteLine($"Up body lines: {migrationFile.GetUpBodyLineCount()}");
+        Console.WriteLine($"Down body lines: {migrationFile.GetDownBodyLineCount()}");
+        Console.WriteLine($"Has Up body: {migrationFile.HasUpBody()}");
+        Console.WriteLine($"Has Down body: {migrationFile.HasDownBody()}");
+        Console.WriteLine($"File size: {migrationFile.GetFileSize()} bytes");
+        Console.WriteLine($"Total SQL statements: {migrationFile.GetTotalSqlStatementCount()}");
+        
+        // Get SQL statements
+        Console.WriteLine("\nUp SQL statements:");
+        foreach (var statement in migrationFile.GetUpSqlStatements())
+        {
+            Console.WriteLine($"  - {statement}");
+        }
+        
+        Console.WriteLine("\nDown SQL statements:");
+        foreach (var statement in migrationFile.GetDownSqlStatements())
+        {
+            Console.WriteLine($"  - {statement}");
+        }
+        
+        // Count comments and keywords
+        var sqlKeywords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "CREATE", "DROP", "ALTER", "INSERT", "UPDATE", "DELETE", "SELECT"
+        };
+        
+        Console.WriteLine($"\nUp body comments: {migrationFile.GetUpBodyCommentCount()}");
+        Console.WriteLine($"Down body comments: {migrationFile.GetDownBodyCommentCount()}");
+        Console.WriteLine($"Up body keywords: {migrationFile.GetUpBodyKeywordCount(sqlKeywords)}");
+        Console.WriteLine($"Down body keywords: {migrationFile.GetDownBodyKeywordCount(sqlKeywords)}");
+    }
+}
+```
+
 ## MigrationFileJsonConfig
 
 `MigrationFileJsonConfig` defines the JSON serialization settings used for `MigrationFile` objects. It exposes the property names that are written, whether camel‑case naming and null‑value ignoring are applied, and provides helper methods to serialize/deserialize the configuration itself.
