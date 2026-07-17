@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 
 namespace SqlMigrationLint
 {
@@ -15,7 +14,7 @@ namespace SqlMigrationLint
         /// <param name="value">The migration file.</param>
         /// <returns>A list of validation problems, or empty list if valid.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is null.</exception>
-        public static IReadOnlyList<string> Validate(this MigrationFile value)
+        public static IReadOnlyList<string> Validate(this MigrationFile? value)
         {
             ArgumentNullException.ThrowIfNull(value);
 
@@ -26,13 +25,9 @@ namespace SqlMigrationLint
             {
                 problems.Add("FilePath is null or empty");
             }
-            else
+            else if (!System.IO.File.Exists(value.FilePath))
             {
-                // Validate file exists if path is provided
-                if (!System.IO.File.Exists(value.FilePath))
-                {
-                    problems.Add($"File does not exist at path: {value.FilePath}");
-                }
+                problems.Add($"File does not exist at path: {value.FilePath}");
             }
 
             // Validate MigrationName is not null or empty
@@ -46,29 +41,24 @@ namespace SqlMigrationLint
             {
                 problems.Add("Lines array is null");
             }
-            else
+            else if (value.Lines.Length == 0)
             {
-                // Validate Lines is not empty
-                if (value.Lines.Length == 0)
-                {
-                    problems.Add("Lines array is empty");
-                }
+                problems.Add("Lines array is empty");
             }
 
             // Validate UpBody and DownBody are consistent with file structure
-            if (value.Lines is not null && value.Lines.Length > 0)
+            if (value.Lines is { Length: > 0 })
             {
-                // Check if UpBody should exist based on file content
                 bool hasUpMethod = false;
                 bool hasDownMethod = false;
 
-                for (int i = 0; i < value.Lines.Length; i++)
+                foreach (string line in value.Lines)
                 {
-                    if (value.Lines[i].Contains("Up(") && value.Lines[i].Contains("MigrationBuilder"))
+                    if (line.Contains("Up(") && line.Contains("MigrationBuilder"))
                     {
                         hasUpMethod = true;
                     }
-                    else if (value.Lines[i].Contains("Down(") && value.Lines[i].Contains("MigrationBuilder"))
+                    else if (line.Contains("Down(") && line.Contains("MigrationBuilder"))
                     {
                         hasDownMethod = true;
                     }
@@ -96,10 +86,7 @@ namespace SqlMigrationLint
         /// <param name="value">The migration file.</param>
         /// <returns>True if valid; otherwise, false.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is null.</exception>
-        public static bool IsValid(this MigrationFile value)
-        {
-            return Validate(value).Count == 0;
-        }
+        public static bool IsValid(this MigrationFile? value) => Validate(value).Count == 0;
 
         /// <summary>
         /// Ensures the migration file is in a valid state.
@@ -107,7 +94,7 @@ namespace SqlMigrationLint
         /// <param name="value">The migration file.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is null.</exception>
         /// <exception cref="ArgumentException">Thrown when validation fails, containing a list of problems.</exception>
-        public static void EnsureValid(this MigrationFile value)
+        public static void EnsureValid(this MigrationFile? value)
         {
             ArgumentNullException.ThrowIfNull(value);
 
