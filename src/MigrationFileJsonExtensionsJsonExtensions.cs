@@ -36,7 +36,7 @@ namespace SqlMigrationLint
     /// <summary>
     /// Provides System.Text.Json serialization extensions for <see cref="MigrationFileJsonConfig"/>.
     /// </summary>
-    public static class MigrationFileJsonExtensionsJsonExtensions
+    public static class MigrationFileJsonConfigJsonExtensions
     {
         private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web)
         {
@@ -45,6 +45,17 @@ namespace SqlMigrationLint
             DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
         };
 
+        private static string ToJson(MigrationFileJsonConfig value, bool indented, JsonSerializerOptions options)
+        {
+            ArgumentNullException.ThrowIfNull(value);
+
+            var localOptions = indented
+                ? new JsonSerializerOptions(options) { WriteIndented = true }
+                : options;
+
+            return JsonSerializer.Serialize(value, localOptions);
+        }
+
         /// <summary>
         /// Serializes a <see cref="MigrationFileJsonConfig"/> instance to a JSON string.
         /// </summary>
@@ -52,26 +63,18 @@ namespace SqlMigrationLint
         /// <param name="indented">Whether to format the JSON with indentation.</param>
         /// <returns>A JSON string representation of the migration file JSON configuration.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is null.</exception>
-        public static string ToJson(this MigrationFileJsonConfig value, bool indented = false)
-        {
-            ArgumentNullException.ThrowIfNull(value);
-
-            var options = indented
-                ? new JsonSerializerOptions(_jsonOptions) { WriteIndented = true }
-                : _jsonOptions;
-
-            return JsonSerializer.Serialize(value, options);
-        }
+        public static string ToJson(this MigrationFileJsonConfig value, bool indented = false) =>
+            ToJson(value, indented, _jsonOptions);
 
         /// <summary>
         /// Deserializes a JSON string to a <see cref="MigrationFileJsonConfig"/> instance.
         /// </summary>
         /// <param name="json">The JSON string to deserialize.</param>
         /// <returns>A <see cref="MigrationFileJsonConfig"/> instance if deserialization succeeds, otherwise null.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="json"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="json"/> is null or empty.</exception>
         public static MigrationFileJsonConfig? FromJson(string json)
         {
-            ArgumentNullException.ThrowIfNull(json);
+            ArgumentNullException.ThrowIfNullOrEmpty(json);
 
             try
             {
@@ -89,10 +92,10 @@ namespace SqlMigrationLint
         /// <param name="json">The JSON string to deserialize.</param>
         /// <param name="value">The deserialized migration file JSON configuration, or null if deserialization fails.</param>
         /// <returns>True if deserialization succeeds, otherwise false.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="json"/> is null.</exception>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="json"/> is null or empty.</exception>
         public static bool TryFromJson(string json, out MigrationFileJsonConfig? value)
         {
-            ArgumentNullException.ThrowIfNull(json);
+            ArgumentNullException.ThrowIfNullOrEmpty(json);
 
             value = null;
 
