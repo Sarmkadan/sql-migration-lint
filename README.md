@@ -30,7 +30,46 @@ if (operation.TableExists && !operation.IsNullable)
 }
 ```
 
-
 ## Architecture
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the component breakdown, data flow, rule catalog (including which rules are registered by default), extension points, and known limitations.
+
+## MigrationFileJsonConfig
+
+`MigrationFileJsonConfig` defines the JSON serialization settings used for `MigrationFile` objects. It exposes the property names that are written, whether camel‑case naming and null‑value ignoring are applied, and provides helper methods to serialize/deserialize the configuration itself.
+
+Example usage:
+
+```csharp
+using System;
+using SqlMigrationLint;
+
+class Program
+{
+    static void Main()
+    {
+        // Inspect the default configuration
+        Console.WriteLine(string.Join(", ", MigrationFileJsonConfig.PropertyNames));
+        Console.WriteLine($"Camel case: {MigrationFileJsonConfig.UseCamelCase}");
+        Console.WriteLine($"Ignore nulls: {MigrationFileJsonConfig.IgnoreNullValues}");
+
+        // Serialize the config to JSON (indented)
+        string json = MigrationFileJsonConfig.ToJson(indented: true);
+        Console.WriteLine(json);
+
+        // Deserialize back
+        var config = MigrationFileJsonConfig.FromJson(json);
+        if (config != null)
+        {
+            Console.WriteLine("Deserialized successfully.");
+        }
+
+        // Try‑parse with error handling
+        if (MigrationFileJsonConfig.TryFromJson(json, out var parsedConfig))
+        {
+            // Use parsedConfig here
+            Console.WriteLine("TryFromJson succeeded.");
+        }
+    }
+}
+```
