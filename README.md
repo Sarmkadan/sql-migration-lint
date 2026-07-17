@@ -168,3 +168,64 @@ class Program
     }
 }
 ```
+
+## MigrationLinterExtensions
+
+`MigrationLinterExtensions` provides a collection of extension methods for `MigrationLinter` and `LintReport` that simplify common reporting and analysis tasks. These methods allow you to filter findings by severity, group them by file or rule, calculate statistics, and quickly access summary information about migration linting results.
+
+Example usage:
+
+```csharp
+using System;
+using System.Linq;
+using SqlMigrationLint;
+
+class Program
+{
+    static void Main()
+    {
+        // Create a linter with the default rule set
+        var linter = MigrationLinter.CreateDefault();
+        string projectPath = "/path/to/your/project";
+
+        // Get all blocker findings
+        var blockers = linter.GetBlockerFindings(projectPath);
+        Console.WriteLine($"Blocker findings: {blockers.Count()}");
+
+        // Group findings by file
+        var findingsByFile = linter.GroupFindingsByFile(projectPath);
+        foreach (var fileGroup in findingsByFile)
+        {
+            Console.WriteLine($"\nFile: {fileGroup.Key}");
+            Console.WriteLine($"  Total findings: {fileGroup.Value.Count}");
+            Console.WriteLine($"  Warnings: {fileGroup.Value.Count(f => f.Severity == LintSeverity.Warning)}");
+            Console.WriteLine($"  Dangers: {fileGroup.Value.Count(f => f.Severity == LintSeverity.Danger)}");
+            Console.WriteLine($"  Blockers: {fileGroup.Value.Count(f => f.Severity == LintSeverity.Blocker)}");
+        }
+
+        // Get statistics
+        Console.WriteLine($"\nTotal findings: {linter.GetTotalFindingsCount(projectPath)}");
+        Console.WriteLine($"Findings percentage: {linter.GetFindingsPercentage(projectPath)}%");
+        Console.WriteLine($"Max severity: {linter.GetMaxFindingSeverity(projectPath)}");
+
+        // Get findings by severity
+        var warnings = linter.GetFindingsBySeverity(projectPath, LintSeverity.Warning);
+        Console.WriteLine($"\nWarning findings: {warnings.Count()}");
+
+        // Get count by severity
+        var countsBySeverity = linter.GetFindingsCountBySeverity(projectPath);
+        foreach (var kvp in countsBySeverity)
+        {
+            Console.WriteLine($"{kvp.Key}: {kvp.Value}");
+        }
+
+        // Check if any findings of a specific severity exist
+        bool hasBlockers = linter.HasFindingsOfSeverity(projectPath, LintSeverity.Blocker);
+        Console.WriteLine($"\nHas blockers: {hasBlockers}");
+
+        // Get rule names with findings
+        var ruleNames = linter.GetRuleNamesWithFindings(projectPath);
+        Console.WriteLine($"\nRules with findings: {string.Join(", ", ruleNames)}");
+    }
+}
+```
