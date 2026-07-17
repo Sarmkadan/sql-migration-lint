@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 
 namespace SqlMigrationLint;
 
@@ -21,8 +20,24 @@ public static class MigrationLinterValidation
 
         var problems = new List<string>();
 
-        // MigrationLinter itself has no state to validate beyond constructor argument validation
-        // which is already handled by the constructor. The LintReport property contains the actual data.
+        // Validate the LintReport if one has been generated
+        if (value.LintReport is { } report)
+        {
+            if (report.Findings is null)
+            {
+                problems.Add("LintReport.Findings collection is null.");
+            }
+
+            if (report.MigrationsScanned < 0)
+            {
+                problems.Add("LintReport.MigrationsScanned cannot be negative.");
+            }
+
+            if (report.MaxRisk is < RiskLevel.None or > RiskLevel.Blocker)
+            {
+                problems.Add("LintReport.MaxRisk has an invalid RiskLevel value.");
+            }
+        }
 
         return problems;
     }
@@ -32,10 +47,7 @@ public static class MigrationLinterValidation
     /// </summary>
     /// <param name="value">The <see cref="MigrationLinter"/> instance to check.</param>
     /// <returns><see langword="true"/> if valid; otherwise, <see langword="false"/>.</returns>
-    public static bool IsValid(this MigrationLinter value)
-    {
-        return value?.Validate().Count == 0;
-    }
+    public static bool IsValid(this MigrationLinter value) => value?.Validate().Count == 0;
 
     /// <summary>
     /// Ensures that a <see cref="MigrationLinter"/> instance is in a valid state.
