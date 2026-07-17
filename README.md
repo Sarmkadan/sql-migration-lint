@@ -34,6 +34,37 @@ if (operation.TableExists && !operation.IsNullable)
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the component breakdown, data flow, rule catalog (including which rules are registered by default), extension points, and known limitations.
 
+## MigrationLinter
+
+The `MigrationLinter` orchestrates linting of migration files using a collection of `ILintRule` implementations. It can be instantiated with a custom rule set via its public constructor or by using the static `CreateDefault` method, which registers all built‑in rules. After calling `Lint` you receive a `LintReport` that contains the findings, the number of migrations scanned, whether any blocker‑severity findings were reported, and the highest risk level observed. The linter also exposes shortcut properties (`Findings`, `MigrationsScanned`, `HasBlockers`, `MaxRisk`) through its `LintReport` property for quick access.
+
+Example usage:
+
+```csharp
+using System;
+using SqlMigrationLint;
+
+class Program
+{
+    static void Main()
+    {
+        // Create a linter with the default rule set
+        var linter = MigrationLinter.CreateDefault();
+
+        // Run the linter against a project root folder
+        var report = linter.Lint("/path/to/project");
+
+        // Access report details
+        Console.WriteLine($"Scanned {report.MigrationsScanned} migrations.");
+        Console.WriteLine($"Has blockers: {report.HasBlockers}");
+        Console.WriteLine($"Maximum risk level: {report.MaxRisk}");
+
+        // Or use the shortcut properties on the linter
+        Console.WriteLine($"Findings count: {linter.LintReport?.Findings.Count ?? 0}");
+    }
+}
+```
+
 ## MigrationFileJsonConfig
 
 `MigrationFileJsonConfig` defines the JSON serialization settings used for `MigrationFile` objects. It exposes the property names that are written, whether camel‑case naming and null‑value ignoring are applied, and provides helper methods to serialize/deserialize the configuration itself.
@@ -72,4 +103,5 @@ class Program
         }
     }
 }
+```
 ```
