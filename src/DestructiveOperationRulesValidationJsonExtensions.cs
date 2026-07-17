@@ -36,7 +36,7 @@ public static class DestructiveOperationRulesValidationJsonExtensions
     /// Deserializes a JSON string to a collection of validation problems.
     /// </summary>
     /// <param name="json">The JSON string to deserialize.</param>
-    /// <returns>A collection of validation problems, or null if the JSON represents a null value.</returns>
+    /// <returns>A collection of validation problems, or null if the JSON is empty or whitespace.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="json"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is empty or whitespace.</exception>
     /// <exception cref="JsonException">Thrown when the JSON is invalid or cannot be deserialized.</exception>
@@ -58,6 +58,7 @@ public static class DestructiveOperationRulesValidationJsonExtensions
     /// <returns>True if deserialization succeeds; otherwise, false.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="json"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is empty or whitespace.</exception>
+/// <exception cref="JsonException">Thrown when the JSON is invalid.</exception>
     public static bool TryFromJson(string json, out IReadOnlyList<string>? value)
     {
         value = null;
