@@ -28,7 +28,7 @@ namespace SqlMigrationLint
         public static string ToJson(this MigrationOperation value, bool indented = false)
         {
             ArgumentNullException.ThrowIfNull(value);
-            
+
             var options = new JsonSerializerOptions(SerializerOptions)
             {
                 WriteIndented = indented
@@ -40,12 +40,15 @@ namespace SqlMigrationLint
         /// Deserializes a JSON string to a <see cref="MigrationOperation"/>.
         /// </summary>
         /// <param name="json">The JSON string to deserialize.</param>
-        /// <returns>A <see cref="MigrationOperation"/> instance, or null if input is null.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="json"/> is null.</exception>
+        /// <returns>A <see cref="MigrationOperation"/> instance, or null if input is null or deserialization fails.</returns>
         /// <exception cref="JsonException">Thrown when JSON deserialization fails.</exception>
         public static MigrationOperation? FromJson(string? json)
         {
-            ArgumentNullException.ThrowIfNull(json);
+            if (json is null)
+            {
+                return null;
+            }
+
             return JsonSerializer.Deserialize<MigrationOperation>(json, SerializerOptions);
         }
 
@@ -53,14 +56,14 @@ namespace SqlMigrationLint
         /// Tries to deserialize a JSON string to a <see cref="MigrationOperation"/>.
         /// </summary>
         /// <param name="json">The JSON string to deserialize.</param>
-        /// <param name="value">The deserialized <see cref="MigrationOperation"/>, or null if input is null.</param>
+        /// <param name="value">The deserialized <see cref="MigrationOperation"/>, or null if deserialization fails.</param>
         /// <returns>True if deserialization succeeded; otherwise false.</returns>
         public static bool TryFromJson(string? json, out MigrationOperation? value)
         {
             try
             {
                 value = FromJson(json);
-                return true;
+                return value is not null;
             }
             catch (JsonException)
             {
