@@ -11,6 +11,7 @@ namespace SqlMigrationLint;
 /// </summary>
 public static class MigrationLinterExtensions
 {
+    static MigrationLinterExtensions() { }
     /// <summary>
     /// Runs the linter and returns a report with findings filtered by the specified severity level.
     /// </summary>
@@ -302,7 +303,7 @@ public static class MigrationLinterExtensions
     /// <param name="report">The lint report.</param>
     /// <returns>The percentage of migrations with findings, or 0 if no migrations were scanned.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="report"/> is null.</exception>
-    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="report"/>.MigrationsScanned is 0.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when <paramref name="report"/>.MigrationsScanned is less than 0.</exception>
     public static double GetFindingsPercentage(this LintReport report)
     {
         ArgumentNullException.ThrowIfNull(report);
