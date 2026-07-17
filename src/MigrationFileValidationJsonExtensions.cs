@@ -6,7 +6,7 @@ using System.Text.Json.Serialization;
 namespace SqlMigrationLint
 {
     /// <summary>
-    /// Provides System.Text.Json serialization extensions for <see cref="MigrationFileValidation"/>.
+    /// Provides System.Text.Json serialization extensions for <see cref="IReadOnlyList{T}"/> where T is <see cref="string"/>.
     /// </summary>
     public static class MigrationFileValidationJsonExtensions
     {
@@ -48,10 +48,8 @@ namespace SqlMigrationLint
         /// <exception cref="JsonException">Thrown when the JSON is invalid or cannot be deserialized.</exception>
         public static IReadOnlyList<string>? FromJson(string json)
         {
-            if (string.IsNullOrEmpty(json))
-            {
-                return null;
-            }
+            ArgumentNullException.ThrowIfNull(json);
+            ArgumentException.ThrowIfNullOrWhiteSpace(json);
 
             return JsonSerializer.Deserialize<IReadOnlyList<string>>(json.Trim(), JsonOptions);
         }
@@ -68,7 +66,7 @@ namespace SqlMigrationLint
         {
             value = null;
 
-            if (string.IsNullOrEmpty(json))
+            if (string.IsNullOrWhiteSpace(json))
             {
                 return false;
             }
@@ -83,5 +81,6 @@ namespace SqlMigrationLint
                 return false;
             }
         }
+
     }
 }
