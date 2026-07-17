@@ -12,28 +12,23 @@ public static class DestructiveOperationRulesValidation
     /// Validates the <see cref="DestructiveOperationRules"/> static class members.
     /// </summary>
     /// <returns>A list of validation problems; empty if valid.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <see cref="DestructiveOperationRules"/> is null.</exception>
     public static IReadOnlyList<string> Validate()
     {
+        ArgumentNullException.ThrowIfNull(DestructiveOperationRules.All);
+
         var problems = new List<string>();
 
         // Validate All property
-        if (DestructiveOperationRules.All is null)
-        {
-            problems.Add("The All property must not be null.");
-        }
-        else if (DestructiveOperationRules.All.Count == 0)
+        if (DestructiveOperationRules.All.Count == 0)
         {
             problems.Add("The All property must contain at least one lint rule.");
         }
 
         // Validate each rule in All
-        foreach (var rule in DestructiveOperationRules.All ?? [])
+        foreach (var rule in DestructiveOperationRules.All)
         {
-            if (rule is null)
-            {
-                problems.Add("The All collection must not contain null elements.");
-                continue;
-            }
+            ArgumentNullException.ThrowIfNull(rule);
 
             if (string.IsNullOrWhiteSpace(rule.Name))
             {
@@ -58,15 +53,13 @@ public static class DestructiveOperationRulesValidation
     /// Determines whether the <see cref="DestructiveOperationRules"/> static class is valid.
     /// </summary>
     /// <returns>True if valid; otherwise, false.</returns>
-    public static bool IsValid()
-    {
-        return Validate().Count == 0;
-    }
+    public static bool IsValid() => Validate().Count == 0;
 
     /// <summary>
     /// Ensures that the <see cref="DestructiveOperationRules"/> static class is valid.
     /// </summary>
     /// <exception cref="ArgumentException">Thrown if validation fails, containing the list of problems.</exception>
+    /// <exception cref="ArgumentNullException">Thrown if <see cref="DestructiveOperationRules"/> is null.</exception>
     public static void EnsureValid()
     {
         var problems = Validate();
@@ -74,9 +67,7 @@ public static class DestructiveOperationRulesValidation
         if (problems.Count > 0)
         {
             throw new ArgumentException(
-                $"DestructiveOperationRules validation failed:{Environment.NewLine}  - {
-                    string.Join($"{Environment.NewLine}  - ", problems)
-                }",
+                $"DestructiveOperationRules validation failed:{Environment.NewLine} - {string.Join($"{Environment.NewLine} - ", problems)}",
                 nameof(DestructiveOperationRules));
         }
     }
