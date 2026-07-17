@@ -45,6 +45,7 @@ namespace SqlMigrationLint
         public static MissingDownMigrationRule? FromJson(string json)
         {
             ArgumentNullException.ThrowIfNull(json);
+
             return JsonSerializer.Deserialize<MissingDownMigrationRule>(json, SerializerOptions);
         }
 
@@ -52,13 +53,19 @@ namespace SqlMigrationLint
         /// Tries to deserialize a JSON string to a <see cref="MissingDownMigrationRule"/>.
         /// </summary>
         /// <param name="json">The JSON string to deserialize.</param>
-        /// <param name="value">The deserialized <see cref="MissingDownMigrationRule"/>, or null if input is null.</param>
+        /// <param name="value">The deserialized <see cref="MissingDownMigrationRule"/>, or null if deserialization fails.</param>
         /// <returns>True if deserialization succeeded; otherwise false.</returns>
         public static bool TryFromJson(string json, out MissingDownMigrationRule? value)
         {
+            if (json is null)
+            {
+                value = null;
+                return false;
+            }
+
             try
             {
-                value = FromJson(json);
+                value = JsonSerializer.Deserialize<MissingDownMigrationRule>(json, SerializerOptions);
                 return true;
             }
             catch (JsonException)
