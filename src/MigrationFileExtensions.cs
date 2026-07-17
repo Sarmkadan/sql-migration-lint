@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 
 namespace SqlMigrationLint
@@ -91,7 +92,7 @@ namespace SqlMigrationLint
         public static string GetFileNameWithoutExtension(this MigrationFile file)
         {
             ArgumentNullException.ThrowIfNull(file);
-            return System.IO.Path.GetFileNameWithoutExtension(file.FilePath);
+            return Path.GetFileNameWithoutExtension(file.FilePath);
         }
 
         /// <summary>
@@ -103,7 +104,7 @@ namespace SqlMigrationLint
         public static string GetDirectoryName(this MigrationFile file)
         {
             ArgumentNullException.ThrowIfNull(file);
-            return System.IO.Path.GetDirectoryName(file.FilePath) ?? string.Empty;
+            return Path.GetDirectoryName(file.FilePath) ?? string.Empty;
         }
 
         /// <summary>
@@ -148,11 +149,11 @@ namespace SqlMigrationLint
         /// <param name="file">The migration file.</param>
         /// <returns>The file size in bytes.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="file"/> is null.</exception>
-        /// <exception cref="System.IO.IOException">Thrown when the file cannot be accessed.</exception>
+        /// <exception cref="IOException">Thrown when the file cannot be accessed.</exception>
         public static long GetFileSize(this MigrationFile file)
         {
             ArgumentNullException.ThrowIfNull(file);
-            return System.IO.File.Exists(file.FilePath) ? new System.IO.FileInfo(file.FilePath).Length : 0;
+            return File.Exists(file.FilePath) ? new FileInfo(file.FilePath).Length : 0L;
         }
 
         /// <summary>
@@ -211,6 +212,8 @@ namespace SqlMigrationLint
 
         private static IEnumerable<string> GetSqlStatements(string? body)
         {
+            ArgumentNullException.ThrowIfNull(body);
+
             if (string.IsNullOrEmpty(body))
             {
                 return Array.Empty<string>();
@@ -236,6 +239,8 @@ namespace SqlMigrationLint
 
         private static int CountKeywords(string? body, IReadOnlySet<string> keywords)
         {
+            ArgumentNullException.ThrowIfNull(keywords);
+
             if (string.IsNullOrEmpty(body) || keywords.Count == 0)
             {
                 return 0;
