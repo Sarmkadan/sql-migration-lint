@@ -1,4 +1,8 @@
+using System;
 using System.CommandLine;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Text.Json;
 using SqlMigrationLint;
 
@@ -29,14 +33,21 @@ public static class Program
 
         var onlyLatestOption = new Option<int?>("--only-latest", "Lint only the last n migrations.");
 
+        // New format option – supports "text" (default) and "json"
+        var formatOption = new Option<string>(
+            "--format",
+            () => "text",
+            "Output format. Supported values: text, json.");
+
         var rootCommand = new RootCommand("Lint EF Core migrations for dangerous operations.");
         rootCommand.AddArgument(pathArgument);
         rootCommand.AddOption(failOnOption);
         rootCommand.AddOption(jsonOption);
         rootCommand.AddOption(ignoreOption);
         rootCommand.AddOption(onlyLatestOption);
+        rootCommand.AddOption(formatOption);
 
-        rootCommand.SetHandler(async (path, failOnSeverity, json, ignore, onlyLatest) =>
+        rootCommand.SetHandler(async (path, failOnSeverity, json, ignore, onlyLatest, format) =>
         {
             var migrationsFolder = Path.Combine(path.FullName, "Migrations");
             if (!Directory.Exists(migrationsFolder))
@@ -62,10 +73,14 @@ public static class Program
             rules.AddRange(LockHeavyOperationRules.All);
             rules.Add(EmptyDownRule.Instance);
 
+            int migrationsScanned = 0;
+
             foreach (var file in migrationFiles)
             {
                 var migrationFile = MigrationFile.TryParse(file);
                 if (migrationFile is null) continue;
+
+                migrationsScanned++;
 
                 var sqlOperation = new SqlOperation
                 {
@@ -77,7 +92,7 @@ public static class Program
                 foreach (var rule in rules)
                 {
                     if (ignore?.Contains(rule.Name) == true) continue;
-                    
+
                     if (rule.AppliesTo(sqlOperation))
                     {
                         var result = rule.Evaluate(sqlOperation);
@@ -87,22 +102,41 @@ public static class Program
                 }
             }
 
-            var maxRisk = findings.Count > 0 
-                ? findings.Max(f => f.Severity switch {
+            bool hasBlockers = findings.Any(f => f.Severity == LintSeverity.Blocker);
+            RiskLevel maxRisk = RiskLevel.None;
+
+            foreach (var f in findings)
+            {
+                var level = f.Severity switch
+                {
                     LintSeverity.Blocker => RiskLevel.Blocker,
                     LintSeverity.Danger => RiskLevel.Danger,
                     LintSeverity.Warning => RiskLevel.Warning,
                     _ => RiskLevel.None
-                }) 
-                : RiskLevel.None;
+                };
 
-            if (json)
+                if (level > maxRisk)
+                    maxRisk = level;
+            }
+
+            var report = new LintReport(findings, migrationsScanned, hasBlockers, maxRisk);
+
+            // Output handling
+            if (format.Equals("json", StringComparison.OrdinalIgnoreCase))
             {
+                // Full report in JSON format
+                var jsonReport = JsonReportWriter.WriteReport(report, indented: true);
+                Console.WriteLine(jsonReport);
+            }
+            else if (json)
+            {
+                // Legacy simple findings JSON
                 var options = new JsonSerializerOptions { WriteIndented = true };
                 Console.WriteLine(JsonSerializer.Serialize(findings, options));
             }
             else
             {
+                // Human‑readable console output
                 foreach (var finding in findings)
                 {
                     Console.ForegroundColor = finding.Severity switch
@@ -125,7 +159,7 @@ public static class Program
             {
                 Environment.Exit(1);
             }
-        }, pathArgument, failOnOption, jsonOption, ignoreOption, onlyLatestOption);
+        }, pathArgument, failOnOption, jsonOption, ignoreOption, onlyLatestOption, formatOption);
 
         return await rootCommand.InvokeAsync(args);
     }
