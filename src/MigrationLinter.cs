@@ -37,6 +37,7 @@ public sealed class MigrationLinter
         allRules.AddRange(DestructiveOperationRules.All);
         allRules.AddRange(LockHeavyOperationRules.All);
         allRules.Add(EmptyDownRule.Instance);
+        allRules.Add(MissingWhereRule.Instance);
         return new MigrationLinter(allRules);
     }
 
