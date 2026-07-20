@@ -9,7 +9,8 @@ internal static class LockHeavyOperationRules
         CreateIndexWithoutConcurrentRule.Instance,
         NonConcurrentIndexRule.Instance,
         AddForeignKeyWithoutIndexRule.Instance,
-        NullableFalseWithoutDefaultRule.Instance
+        NullableFalseWithoutDefaultRule.Instance,
+        AddNotNullWithoutDefaultRule.Instance
     ];
 
     private sealed class AddColumnWithDefaultRule : ILintRule

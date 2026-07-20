@@ -78,7 +78,7 @@ All rules implement `ILintRule` (`src/ILintRule.cs`): `Name`, `Description`, `Se
 | Group | Rules | Operates on |
 |---|---|---|
 | `DestructiveOperationRules` | `drop-table`, `drop-column`, `drop-index`, `rename-column`, `rename-table`, `delete-data`, `drop-database-object` | `SqlOperation` (regex on SQL text) |
-| `LockHeavyOperationRules` | `add-column-with-default`, `alter-column-type-change`, `data-loss-alter-column`, `create-index-without-concurrent`, `add-foreign-key-without-index`, `nullable-false-without-default` | structured operations only - never fire from the CLI today, since the CLI produces only `SqlOperation` |
+| `LockHeavyOperationRules` | `add-column-with-default`, `alter-column-type-change`, `data-loss-alter-column`, `create-index-without-concurrent`, `add-foreign-key-without-index`, `nullable-false-without-default`, `add-not-null-without-default` | structured operations only - never fire from the CLI today, since the CLI produces only `SqlOperation` |
 | `EmptyDownRule` | `ML100` - Up non-empty but Down is empty / only `throw` / only comments | `SqlOperation` (re-parses the file to inspect `DownBody`) |
 
 **Implemented but not registered anywhere:** `MissingDownMigrationRule` (`ML101` - matches `CreateTable`/`CreateIndex`/`AddColumn` calls in Up against corresponding Drops in Down) and `NamingConventionRule` (`ML102` - `IX_`/`FK_`/`PK_`/`UQ_` prefixes, configurable via constructor). To use them, pass them to `new MigrationLinter([...])`; they are not in `CreateDefault()` or the CLI rule list.
