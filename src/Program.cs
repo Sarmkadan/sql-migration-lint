@@ -39,6 +39,8 @@ public static class Program
             () => "text",
             "Output format. Supported values: text, json.");
 
+        var configOption = new Option<string?>("--config", "Path to .sqlmigrationlint.json configuration file.");
+
         var rootCommand = new RootCommand("Lint EF Core migrations for dangerous operations.");
         rootCommand.AddArgument(pathArgument);
         rootCommand.AddOption(failOnOption);
@@ -46,8 +48,9 @@ public static class Program
         rootCommand.AddOption(ignoreOption);
         rootCommand.AddOption(onlyLatestOption);
         rootCommand.AddOption(formatOption);
+        rootCommand.AddOption(configOption);
 
-        rootCommand.SetHandler(async (path, failOnSeverity, json, ignore, onlyLatest, format) =>
+        rootCommand.SetHandler(async (path, failOnSeverity, json, ignore, onlyLatest, format, configPath) =>
         {
             var migrationsFolder = Path.Combine(path.FullName, "Migrations");
             if (!Directory.Exists(migrationsFolder))
@@ -67,59 +70,10 @@ public static class Program
                 migrationFiles = migrationFiles.TakeLast(onlyLatest.Value).ToArray();
             }
 
-            var findings = new List<LintFinding>();
-            var rules = new List<ILintRule>();
-            rules.AddRange(DestructiveOperationRules.All);
-            rules.AddRange(LockHeavyOperationRules.All);
-            rules.Add(EmptyDownRule.Instance);
+            var config = configPath != null ? LintConfig.Load(configPath) : null;
 
-            int migrationsScanned = 0;
-
-            foreach (var file in migrationFiles)
-            {
-                var migrationFile = MigrationFile.TryParse(file);
-                if (migrationFile is null) continue;
-
-                migrationsScanned++;
-
-                var sqlOperation = new SqlOperation
-                {
-                    File = file,
-                    Line = 1,
-                    Sql = migrationFile.UpBody ?? string.Empty
-                };
-
-                foreach (var rule in rules)
-                {
-                    if (ignore?.Contains(rule.Name) == true) continue;
-
-                    if (rule.AppliesTo(sqlOperation))
-                    {
-                        var result = rule.Evaluate(sqlOperation);
-                        if (result is not null)
-                            findings.Add(result);
-                    }
-                }
-            }
-
-            bool hasBlockers = findings.Any(f => f.Severity == LintSeverity.Blocker);
-            RiskLevel maxRisk = RiskLevel.None;
-
-            foreach (var f in findings)
-            {
-                var level = f.Severity switch
-                {
-                    LintSeverity.Blocker => RiskLevel.Blocker,
-                    LintSeverity.Danger => RiskLevel.Danger,
-                    LintSeverity.Warning => RiskLevel.Warning,
-                    _ => RiskLevel.None
-                };
-
-                if (level > maxRisk)
-                    maxRisk = level;
-            }
-
-            var report = new LintReport(findings, migrationsScanned, hasBlockers, maxRisk);
+            var linter = MigrationLinter.CreateDefaultWithGlobalRules(configPath);
+            var report = linter.Lint(path.FullName);
 
             // Output handling
             if (format.Equals("json", StringComparison.OrdinalIgnoreCase))
@@ -132,12 +86,12 @@ public static class Program
             {
                 // Legacy simple findings JSON
                 var options = new JsonSerializerOptions { WriteIndented = true };
-                Console.WriteLine(JsonSerializer.Serialize(findings, options));
+                Console.WriteLine(JsonSerializer.Serialize(report.Findings, options));
             }
             else
             {
                 // Human‑readable console output
-                foreach (var finding in findings)
+                foreach (var finding in report.Findings)
                 {
                     Console.ForegroundColor = finding.Severity switch
                     {
@@ -151,15 +105,15 @@ public static class Program
                 }
             }
 
-            var highestFindingSeverity = findings.Any()
-                ? findings.Max(f => MapToFindingSeverity(f.Severity))
+            var highestFindingSeverity = report.Findings.Any()
+                ? report.Findings.Max(f => MapToFindingSeverity(f.Severity))
                 : (LintFindingSeverity?)null;
 
             if (highestFindingSeverity.HasValue && highestFindingSeverity.Value >= failOnSeverity)
             {
                 Environment.Exit(1);
             }
-        }, pathArgument, failOnOption, jsonOption, ignoreOption, onlyLatestOption, formatOption);
+        }, pathArgument, failOnOption, jsonOption, ignoreOption, onlyLatestOption, formatOption, configOption);
 
         return await rootCommand.InvokeAsync(args);
     }

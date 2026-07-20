@@ -1,0 +1,11 @@
+{
+  "$schema": "https://raw.githubusercontent.com/sarmkadan/sql-migration-lint/main/.sqlmigrationlint.json",
+  "rules": {
+    "drop-table": "warning",
+    "drop-column": "error",
+    "delete-data": "off",
+    "add-column-with-default": "warning",
+    "alter-column-type-change": "error",
+    "ML103": "warning"
+  }
+}

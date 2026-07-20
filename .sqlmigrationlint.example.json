@@ -1,0 +1,22 @@
+{
+  "$schema": "https://raw.githubusercontent.com/sarmkadan/sql-migration-lint/main/.sqlmigrationlint.json",
+  "rules": {
+    "drop-table": "warning",
+    "drop-column": "error",
+    "drop-index": "warning",
+    "rename-column": "danger",
+    "rename-table": "danger",
+    "delete-data": "off",
+    "drop-database-object": "error",
+    "add-column-with-default": "warning",
+    "alter-column-type-change": "error",
+    "create-index-without-concurrent": "warning",
+    "add-foreign-key-without-index": "error",
+    "nullable-false-without-default": "error",
+    "add-not-null-without-default": "error",
+    "non-concurrent-index": "warning",
+    "empty-down": "warning",
+    "missing-where": "warning",
+    "ML103": "warning"
+  }
+}

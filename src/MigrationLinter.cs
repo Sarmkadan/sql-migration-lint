@@ -12,6 +12,7 @@ public sealed class MigrationLinter
 {
     private readonly IReadOnlyList<ILintRule> _perFileRules;
     private readonly IReadOnlyList<IGlobalLintRule> _globalRules;
+    private readonly LintConfig? _config;
     private LintReport? _lintReport;
 
     /// <summary>
@@ -20,22 +21,32 @@ public sealed class MigrationLinter
     public LintReport? LintReport => _lintReport;
 
     /// <summary>
+    /// Gets the configuration used for this linter instance.
+    /// </summary>
+    public LintConfig? Config => _config;
+
+    /// <summary>
     /// Creates a new <see cref="MigrationLinter"/> with the supplied rules.
     /// </summary>
     /// <param name="perFileRules">The collection of per-file lint rules to apply.</param>
     /// <param name="globalRules">The collection of global lint rules to apply.</param>
-    public MigrationLinter(IEnumerable<ILintRule> perFileRules, IEnumerable<IGlobalLintRule>? globalRules = null)
+    /// <param name="config">Optional configuration to override rule severities and disable rules.</param>
+    public MigrationLinter(IEnumerable<ILintRule> perFileRules, IEnumerable<IGlobalLintRule>? globalRules = null, LintConfig? config = null)
     {
         ArgumentNullException.ThrowIfNull(perFileRules);
         _perFileRules = perFileRules.ToArray();
         _globalRules = globalRules?.ToArray() ?? Array.Empty<IGlobalLintRule>();
+        _config = config;
     }
 
     /// <summary>
     /// Creates a <see cref="MigrationLinter"/> pre‑populated with all built‑in rules.
     /// </summary>
-    public static MigrationLinter CreateDefault()
+    /// <param name="configPath">Optional path to .sqlmigrationlint.json configuration file.</param>
+    public static MigrationLinter CreateDefault(string? configPath = null)
     {
+        var config = configPath != null ? LintConfig.Load(configPath) : null;
+
         var allRules = new List<ILintRule>();
         allRules.AddRange(DestructiveOperationRules.All);
         allRules.AddRange(LockHeavyOperationRules.All);
@@ -44,14 +55,17 @@ public sealed class MigrationLinter
         allRules.Add(MissingWhereRule.Instance);
 
         // No global rules by default
-        return new MigrationLinter(allRules);
+        return new MigrationLinter(allRules, config: config);
     }
 
     /// <summary>
     /// Creates a <see cref="MigrationLinter"/> pre‑populated with all built‑in rules including global rules.
     /// </summary>
-    public static MigrationLinter CreateDefaultWithGlobalRules()
+    /// <param name="configPath">Optional path to .sqlmigrationlint.json configuration file.</param>
+    public static MigrationLinter CreateDefaultWithGlobalRules(string? configPath = null)
     {
+        var config = configPath != null ? LintConfig.Load(configPath) : null;
+
         var allRules = new List<ILintRule>();
         allRules.AddRange(DestructiveOperationRules.All);
         allRules.AddRange(LockHeavyOperationRules.All);
@@ -62,7 +76,7 @@ public sealed class MigrationLinter
         var globalRules = new List<IGlobalLintRule>();
         globalRules.Add(DuplicateMigrationVersionRule.Instance);
 
-        return new MigrationLinter(allRules, globalRules);
+        return new MigrationLinter(allRules, globalRules, config: config);
     }
 
     /// <summary>
@@ -106,9 +120,13 @@ public sealed class MigrationLinter
         // Apply global rules (operate on all migration files)
         foreach (var globalRule in _globalRules)
         {
-            var globalFindings = globalRule.Evaluate(parsedMigrationFiles);
-            if (globalFindings is not null)
-                findings.AddRange(globalFindings);
+            // Check if rule should be evaluated based on configuration
+            if (_config?.ShouldEvaluateRule(globalRule.Name) != false)
+            {
+                var globalFindings = globalRule.Evaluate(parsedMigrationFiles);
+                if (globalFindings is not null)
+                    findings.AddRange(globalFindings);
+            }
         }
 
         // Apply per-file rules
@@ -130,11 +148,15 @@ public sealed class MigrationLinter
 
             foreach (var rule in _perFileRules)
             {
-                if (rule.AppliesTo(sqlOperation))
+                // Check if rule should be evaluated based on configuration
+                if (_config?.ShouldEvaluateRule(rule.Name) != false)
                 {
-                    var result = rule.Evaluate(sqlOperation);
-                    if (result is not null)
-                        findings.Add(result);
+                    if (rule.AppliesTo(sqlOperation))
+                    {
+                        var result = rule.Evaluate(sqlOperation);
+                        if (result is not null)
+                            findings.Add(result);
+                    }
                 }
             }
         }
