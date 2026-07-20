@@ -14,11 +14,11 @@ public static class Program
         };
         pathArgument.SetDefaultValue(new DirectoryInfo("."));
 
-        var failOnOption = new Option<RiskLevel>("--fail-on", "The severity level at which to exit with error.")
+        var failOnOption = new Option<LintFindingSeverity>("--fail-on", "The severity level at which to exit with error.")
         {
             Arity = ArgumentArity.ExactlyOne
         };
-        failOnOption.SetDefaultValue(RiskLevel.Danger);
+        failOnOption.SetDefaultValue(LintFindingSeverity.Error);
 
         var jsonOption = new Option<bool>("--json", "Output findings in JSON format.");
 
@@ -36,7 +36,7 @@ public static class Program
         rootCommand.AddOption(ignoreOption);
         rootCommand.AddOption(onlyLatestOption);
 
-        rootCommand.SetHandler(async (path, failOn, json, ignore, onlyLatest) =>
+        rootCommand.SetHandler(async (path, failOnSeverity, json, ignore, onlyLatest) =>
         {
             var migrationsFolder = Path.Combine(path.FullName, "Migrations");
             if (!Directory.Exists(migrationsFolder))
@@ -117,7 +117,11 @@ public static class Program
                 }
             }
 
-            if (maxRisk >= failOn && failOn != RiskLevel.None)
+            var highestFindingSeverity = findings.Any()
+                ? findings.Max(f => MapToFindingSeverity(f.Severity))
+                : (LintFindingSeverity?)null;
+
+            if (highestFindingSeverity.HasValue && highestFindingSeverity.Value >= failOnSeverity)
             {
                 Environment.Exit(1);
             }
@@ -125,4 +129,12 @@ public static class Program
 
         return await rootCommand.InvokeAsync(args);
     }
+
+    private static LintFindingSeverity MapToFindingSeverity(LintSeverity severity) => severity switch
+    {
+        LintSeverity.Blocker => LintFindingSeverity.Error,
+        LintSeverity.Danger => LintFindingSeverity.Error,
+        LintSeverity.Warning => LintFindingSeverity.Warning,
+        _ => LintFindingSeverity.Info
+    };
 }
