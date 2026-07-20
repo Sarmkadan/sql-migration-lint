@@ -36,6 +36,7 @@ public sealed class MigrationLinter
         var allRules = new List<ILintRule>();
         allRules.AddRange(DestructiveOperationRules.All);
         allRules.AddRange(LockHeavyOperationRules.All);
+        allRules.Add(NonConcurrentIndexRule.Instance);
         allRules.Add(EmptyDownRule.Instance);
         allRules.Add(MissingWhereRule.Instance);
         return new MigrationLinter(allRules);

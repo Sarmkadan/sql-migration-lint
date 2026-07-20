@@ -7,6 +7,7 @@ internal static class LockHeavyOperationRules
         AlterColumnTypeChangeRule.Instance,
         DataLossAlterColumnRule.Instance,
         CreateIndexWithoutConcurrentRule.Instance,
+        NonConcurrentIndexRule.Instance,
         AddForeignKeyWithoutIndexRule.Instance,
         NullableFalseWithoutDefaultRule.Instance
     ];
