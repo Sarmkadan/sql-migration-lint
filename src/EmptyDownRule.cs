@@ -41,7 +41,7 @@ internal sealed class EmptyDownRule : ILintRule
         // Check if DownBody is empty or contains only throw/whitespace/comments
         bool isDownEmpty = string.IsNullOrWhiteSpace(migrationFile.DownBody);
 
-        if (!isDownEmpty)
+        if (!isDownEmpty && migrationFile.DownBody is not null)
         {
             // Check if DownBody contains only throw statements, comments, or whitespace
             string downBodyTrimmed = migrationFile.DownBody.Trim();

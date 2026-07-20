@@ -6,11 +6,12 @@ using System.Linq;
 namespace SqlMigrationLint;
 
 /// <summary>
-/// Orchestrates linting of migration files using a set of <see cref="ILintRule"/> implementations.
+/// Orchestrates linting of migration files using a set of <see cref="ILintRule"/> and <see cref="IGlobalLintRule"/> implementations.
 /// </summary>
 public sealed class MigrationLinter
 {
-    private readonly IReadOnlyList<ILintRule> _rules;
+    private readonly IReadOnlyList<ILintRule> _perFileRules;
+    private readonly IReadOnlyList<IGlobalLintRule> _globalRules;
     private LintReport? _lintReport;
 
     /// <summary>
@@ -21,11 +22,13 @@ public sealed class MigrationLinter
     /// <summary>
     /// Creates a new <see cref="MigrationLinter"/> with the supplied rules.
     /// </summary>
-    /// <param name="rules">The collection of lint rules to apply.</param>
-    public MigrationLinter(IEnumerable<ILintRule> rules)
+    /// <param name="perFileRules">The collection of per-file lint rules to apply.</param>
+    /// <param name="globalRules">The collection of global lint rules to apply.</param>
+    public MigrationLinter(IEnumerable<ILintRule> perFileRules, IEnumerable<IGlobalLintRule>? globalRules = null)
     {
-        ArgumentNullException.ThrowIfNull(rules);
-        _rules = rules.ToArray();
+        ArgumentNullException.ThrowIfNull(perFileRules);
+        _perFileRules = perFileRules.ToArray();
+        _globalRules = globalRules?.ToArray() ?? Array.Empty<IGlobalLintRule>();
     }
 
     /// <summary>
@@ -39,7 +42,27 @@ public sealed class MigrationLinter
         allRules.Add(NonConcurrentIndexRule.Instance);
         allRules.Add(EmptyDownRule.Instance);
         allRules.Add(MissingWhereRule.Instance);
+
+        // No global rules by default
         return new MigrationLinter(allRules);
+    }
+
+    /// <summary>
+    /// Creates a <see cref="MigrationLinter"/> pre‑populated with all built‑in rules including global rules.
+    /// </summary>
+    public static MigrationLinter CreateDefaultWithGlobalRules()
+    {
+        var allRules = new List<ILintRule>();
+        allRules.AddRange(DestructiveOperationRules.All);
+        allRules.AddRange(LockHeavyOperationRules.All);
+        allRules.Add(NonConcurrentIndexRule.Instance);
+        allRules.Add(EmptyDownRule.Instance);
+        allRules.Add(MissingWhereRule.Instance);
+
+        var globalRules = new List<IGlobalLintRule>();
+        globalRules.Add(DuplicateMigrationVersionRule.Instance);
+
+        return new MigrationLinter(allRules, globalRules);
     }
 
     /// <summary>
@@ -68,13 +91,34 @@ public sealed class MigrationLinter
         var findings = new List<LintFinding>();
         int migrationsScanned = 0;
 
+        // Parse all migration files first
+        var parsedMigrationFiles = new List<MigrationFile>();
         foreach (var file in migrationFiles)
         {
             var migrationFile = MigrationFile.TryParse(file);
+            if (migrationFile is not null)
+            {
+                migrationsScanned++;
+                parsedMigrationFiles.Add(migrationFile);
+            }
+        }
+
+        // Apply global rules (operate on all migration files)
+        foreach (var globalRule in _globalRules)
+        {
+            var globalFindings = globalRule.Evaluate(parsedMigrationFiles);
+            if (globalFindings is not null)
+                findings.AddRange(globalFindings);
+        }
+
+        // Apply per-file rules
+        foreach (var file in migrationFiles)
+        {
+            // Find the corresponding parsed migration file
+            var migrationFile = parsedMigrationFiles.FirstOrDefault(mf => mf.FilePath.Equals(file, StringComparison.Ordinal));
+
             if (migrationFile is null)
                 continue;
-
-            migrationsScanned++;
 
             // Build a generic SqlOperation that represents the Up body of the migration.
             var sqlOperation = new SqlOperation
@@ -84,7 +128,7 @@ public sealed class MigrationLinter
                 Sql = migrationFile.UpBody ?? string.Empty
             };
 
-            foreach (var rule in _rules)
+            foreach (var rule in _perFileRules)
             {
                 if (rule.AppliesTo(sqlOperation))
                 {
