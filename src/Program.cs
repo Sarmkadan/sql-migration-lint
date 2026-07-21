@@ -18,7 +18,7 @@ public static class Program
         };
         pathArgument.SetDefaultValue(new DirectoryInfo("."));
 
-        var failOnOption = new Option<LintFindingSeverity>("--fail-on", "The severity level at which to exit with error.")
+        var failOnOption = new Option<LintFindingSeverity>("--fail-on", "The severity level at which to exit with error. Allowed values: Info, Warning, Error (default: Error).")
         {
             Arity = ArgumentArity.ExactlyOne
         };
