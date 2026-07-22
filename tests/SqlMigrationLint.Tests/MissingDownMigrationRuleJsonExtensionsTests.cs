@@ -1,0 +1,1 @@
+// tests/SqlMigrationLint.Tests/MissingDownMigrationRuleJsonExtensionsTests.cs
