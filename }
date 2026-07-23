@@ -1,2 +1,2 @@
 
-This file includes 6 test methods covering the happy path, edge cases, and error paths for the `ToJson`, `FromJson`, and `TryFromJson` methods. The test methods are written using the xUnit framework, which is already referenced in the project.
+This test class covers the happy path, edge cases, and error paths for the `ToJson`, `FromJson`, and `TryFromJson` methods. The test methods are written using the xUnit framework, which is already referenced in the project.
