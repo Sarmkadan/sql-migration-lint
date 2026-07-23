@@ -11,6 +11,7 @@ namespace SqlMigrationLint;
 public sealed class MigrationLinter
 {
     private readonly IReadOnlyList<ILintRule> _perFileRules;
+    private readonly IReadOnlyList<IPerFileLintRule> _perFileFileRules;
     private readonly IReadOnlyList<IGlobalLintRule> _globalRules;
     private readonly LintConfig? _config;
     private LintReport? _lintReport;
@@ -28,14 +29,25 @@ public sealed class MigrationLinter
     /// <summary>
     /// Creates a new <see cref="MigrationLinter"/> with the supplied rules.
     /// </summary>
-    /// <param name="perFileRules">The collection of per-file lint rules to apply.</param>
+    /// <param name="perFileRules">The collection of operation-scoped per-file lint rules to apply.</param>
     /// <param name="globalRules">The collection of global lint rules to apply.</param>
     /// <param name="config">Optional configuration to override rule severities and disable rules.</param>
-    public MigrationLinter(IEnumerable<ILintRule> perFileRules, IEnumerable<IGlobalLintRule>? globalRules = null, LintConfig? config = null)
+    /// <param name="fileScopedRules">
+    /// Optional collection of <see cref="IPerFileLintRule"/> implementations that receive the already-parsed
+    /// <see cref="MigrationFile"/> directly, instead of the <see cref="SqlOperation"/> abstraction used by
+    /// <paramref name="perFileRules"/>.
+    /// </param>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="perFileRules"/> is null.</exception>
+    public MigrationLinter(
+        IEnumerable<ILintRule> perFileRules,
+        IEnumerable<IGlobalLintRule>? globalRules = null,
+        LintConfig? config = null,
+        IEnumerable<IPerFileLintRule>? fileScopedRules = null)
     {
         ArgumentNullException.ThrowIfNull(perFileRules);
         _perFileRules = perFileRules.ToArray();
         _globalRules = globalRules?.ToArray() ?? Array.Empty<IGlobalLintRule>();
+        _perFileFileRules = fileScopedRules?.ToArray() ?? Array.Empty<IPerFileLintRule>();
         _config = config;
     }
 
@@ -137,6 +149,18 @@ public sealed class MigrationLinter
 
             if (migrationFile is null)
                 continue;
+
+            // Apply file-scoped rules directly against the already-parsed migration file,
+            // avoiding any redundant re-parsing of the file from disk.
+            foreach (var fileRule in _perFileFileRules)
+            {
+                if (_config?.ShouldEvaluateRule(fileRule.RuleName) != false)
+                {
+                    var fileFindings = fileRule.Check(migrationFile, _config);
+                    if (fileFindings is not null)
+                        findings.AddRange(fileFindings);
+                }
+            }
 
             // Build a generic SqlOperation that represents the Up body of the migration.
             var sqlOperation = new SqlOperation
