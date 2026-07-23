@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
 namespace SqlMigrationLint;
@@ -5,7 +7,7 @@ namespace SqlMigrationLint;
 /// <summary>
 /// Rule to check for correct object naming conventions in SQL migrations.
 /// </summary>
-public sealed class NamingConventionRule : ILintRule
+public sealed class NamingConventionRule : ILintRule, IPerFileLintRule
 {
     private readonly string _indexPrefix;
     private readonly string _fkPrefix;
@@ -98,5 +100,35 @@ public sealed class NamingConventionRule : ILintRule
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Gets the unique rule name used for configuration lookups, identical to <see cref="Name"/>.
+    /// </summary>
+    string IPerFileLintRule.RuleName => Name;
+
+    /// <summary>
+    /// Checks a migration file's Up body for naming convention violations.
+    /// </summary>
+    /// <param name="file">The parsed migration file to check.</param>
+    /// <param name="config">The active lint configuration, or null if none was loaded.</param>
+    /// <returns>A collection of lint findings; empty if no violations were found.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="file"/> is null.</exception>
+    public IEnumerable<LintFinding> Check(MigrationFile file, LintConfig? config)
+    {
+        ArgumentNullException.ThrowIfNull(file);
+
+        var sqlOperation = new SqlOperation
+        {
+            File = file.FilePath,
+            Line = 1,
+            Sql = file.UpBody ?? string.Empty
+        };
+
+        var finding = Evaluate(sqlOperation);
+        if (finding is not null)
+        {
+            yield return finding;
+        }
     }
 }

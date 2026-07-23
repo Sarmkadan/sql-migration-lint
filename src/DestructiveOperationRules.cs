@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Text.RegularExpressions;
 
 namespace SqlMigrationLint;
@@ -20,7 +22,37 @@ public static class DestructiveOperationRules
         DropDataRule.Instance
     ];
 
-    private sealed class DropTableRule : ILintRule
+    /// <summary>
+    /// Evaluates a per-file rule against a migration file's Up body by adapting it to the
+    /// <see cref="MigrationOperation"/>-based evaluation shared by all destructive operation rules.
+    /// </summary>
+    /// <param name="rule">The rule to evaluate.</param>
+    /// <param name="file">The parsed migration file to check.</param>
+    /// <returns>A collection of lint findings; empty if the file has no issues for this rule.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="rule"/> or <paramref name="file"/> is null.</exception>
+    private static IEnumerable<LintFinding> CheckAgainstUpBody(ILintRule rule, MigrationFile file)
+    {
+        ArgumentNullException.ThrowIfNull(rule);
+        ArgumentNullException.ThrowIfNull(file);
+
+        var sqlOperation = new SqlOperation
+        {
+            File = file.FilePath,
+            Line = 1,
+            Sql = file.UpBody ?? string.Empty
+        };
+
+        if (rule.AppliesTo(sqlOperation))
+        {
+            var finding = rule.Evaluate(sqlOperation);
+            if (finding is not null)
+            {
+                yield return finding;
+            }
+        }
+    }
+
+    private sealed class DropTableRule : ILintRule, IPerFileLintRule
     {
         public static readonly DropTableRule Instance = new();
 
@@ -52,9 +84,23 @@ public static class DestructiveOperationRules
 
             return null;
         }
+
+        /// <summary>
+        /// Gets the unique rule name used for configuration lookups, identical to <see cref="Name"/>.
+        /// </summary>
+        string IPerFileLintRule.RuleName => Name;
+
+        /// <summary>
+        /// Checks a migration file's Up body for this destructive operation pattern.
+        /// </summary>
+        /// <param name="file">The parsed migration file to check.</param>
+        /// <param name="config">The active lint configuration, or null if none was loaded.</param>
+        /// <returns>A collection of lint findings; empty if the file has no issues.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="file"/> is null.</exception>
+        public IEnumerable<LintFinding> Check(MigrationFile file, LintConfig? config) => CheckAgainstUpBody(this, file);
     }
 
-    private sealed class DropColumnRule : ILintRule
+    private sealed class DropColumnRule : ILintRule, IPerFileLintRule
     {
         public static readonly DropColumnRule Instance = new();
 
@@ -85,9 +131,23 @@ public static class DestructiveOperationRules
 
             return null;
         }
+
+        /// <summary>
+        /// Gets the unique rule name used for configuration lookups, identical to <see cref="Name"/>.
+        /// </summary>
+        string IPerFileLintRule.RuleName => Name;
+
+        /// <summary>
+        /// Checks a migration file's Up body for this destructive operation pattern.
+        /// </summary>
+        /// <param name="file">The parsed migration file to check.</param>
+        /// <param name="config">The active lint configuration, or null if none was loaded.</param>
+        /// <returns>A collection of lint findings; empty if the file has no issues.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="file"/> is null.</exception>
+        public IEnumerable<LintFinding> Check(MigrationFile file, LintConfig? config) => CheckAgainstUpBody(this, file);
     }
 
-    private sealed class DropIndexRule : ILintRule
+    private sealed class DropIndexRule : ILintRule, IPerFileLintRule
     {
         public static readonly DropIndexRule Instance = new();
 
@@ -118,9 +178,23 @@ public static class DestructiveOperationRules
 
             return null;
         }
+
+        /// <summary>
+        /// Gets the unique rule name used for configuration lookups, identical to <see cref="Name"/>.
+        /// </summary>
+        string IPerFileLintRule.RuleName => Name;
+
+        /// <summary>
+        /// Checks a migration file's Up body for this destructive operation pattern.
+        /// </summary>
+        /// <param name="file">The parsed migration file to check.</param>
+        /// <param name="config">The active lint configuration, or null if none was loaded.</param>
+        /// <returns>A collection of lint findings; empty if the file has no issues.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="file"/> is null.</exception>
+        public IEnumerable<LintFinding> Check(MigrationFile file, LintConfig? config) => CheckAgainstUpBody(this, file);
     }
 
-    private sealed class RenameColumnRule : ILintRule
+    private sealed class RenameColumnRule : ILintRule, IPerFileLintRule
     {
         public static readonly RenameColumnRule Instance = new();
 
@@ -151,9 +225,23 @@ public static class DestructiveOperationRules
 
             return null;
         }
+
+        /// <summary>
+        /// Gets the unique rule name used for configuration lookups, identical to <see cref="Name"/>.
+        /// </summary>
+        string IPerFileLintRule.RuleName => Name;
+
+        /// <summary>
+        /// Checks a migration file's Up body for this destructive operation pattern.
+        /// </summary>
+        /// <param name="file">The parsed migration file to check.</param>
+        /// <param name="config">The active lint configuration, or null if none was loaded.</param>
+        /// <returns>A collection of lint findings; empty if the file has no issues.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="file"/> is null.</exception>
+        public IEnumerable<LintFinding> Check(MigrationFile file, LintConfig? config) => CheckAgainstUpBody(this, file);
     }
 
-    private sealed class RenameTableRule : ILintRule
+    private sealed class RenameTableRule : ILintRule, IPerFileLintRule
     {
         public static readonly RenameTableRule Instance = new();
 
@@ -184,9 +272,23 @@ public static class DestructiveOperationRules
 
             return null;
         }
+
+        /// <summary>
+        /// Gets the unique rule name used for configuration lookups, identical to <see cref="Name"/>.
+        /// </summary>
+        string IPerFileLintRule.RuleName => Name;
+
+        /// <summary>
+        /// Checks a migration file's Up body for this destructive operation pattern.
+        /// </summary>
+        /// <param name="file">The parsed migration file to check.</param>
+        /// <param name="config">The active lint configuration, or null if none was loaded.</param>
+        /// <returns>A collection of lint findings; empty if the file has no issues.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="file"/> is null.</exception>
+        public IEnumerable<LintFinding> Check(MigrationFile file, LintConfig? config) => CheckAgainstUpBody(this, file);
     }
 
-    private sealed class DeleteDataRule : ILintRule
+    private sealed class DeleteDataRule : ILintRule, IPerFileLintRule
     {
         public static readonly DeleteDataRule Instance = new();
 
@@ -217,9 +319,23 @@ public static class DestructiveOperationRules
 
             return null;
         }
+
+        /// <summary>
+        /// Gets the unique rule name used for configuration lookups, identical to <see cref="Name"/>.
+        /// </summary>
+        string IPerFileLintRule.RuleName => Name;
+
+        /// <summary>
+        /// Checks a migration file's Up body for this destructive operation pattern.
+        /// </summary>
+        /// <param name="file">The parsed migration file to check.</param>
+        /// <param name="config">The active lint configuration, or null if none was loaded.</param>
+        /// <returns>A collection of lint findings; empty if the file has no issues.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="file"/> is null.</exception>
+        public IEnumerable<LintFinding> Check(MigrationFile file, LintConfig? config) => CheckAgainstUpBody(this, file);
     }
 
-    private sealed class DropDataRule : ILintRule
+    private sealed class DropDataRule : ILintRule, IPerFileLintRule
     {
         public static readonly DropDataRule Instance = new();
 
@@ -250,5 +366,19 @@ public static class DestructiveOperationRules
 
             return null;
         }
+
+        /// <summary>
+        /// Gets the unique rule name used for configuration lookups, identical to <see cref="Name"/>.
+        /// </summary>
+        string IPerFileLintRule.RuleName => Name;
+
+        /// <summary>
+        /// Checks a migration file's Up body for this destructive operation pattern.
+        /// </summary>
+        /// <param name="file">The parsed migration file to check.</param>
+        /// <param name="config">The active lint configuration, or null if none was loaded.</param>
+        /// <returns>A collection of lint findings; empty if the file has no issues.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="file"/> is null.</exception>
+        public IEnumerable<LintFinding> Check(MigrationFile file, LintConfig? config) => CheckAgainstUpBody(this, file);
     }
 }
