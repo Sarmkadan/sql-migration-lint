@@ -10,7 +10,7 @@ namespace SqlMigrationLint;
 
 public static class Program
 {
-    public static async Task<int> Main(string[] args)
+    public static int Main(string[] args)
     {
         var pathArgument = new Argument<DirectoryInfo>("path", "The path to the migrations folder.")
         {
@@ -50,7 +50,7 @@ public static class Program
         rootCommand.AddOption(formatOption);
         rootCommand.AddOption(configOption);
 
-        rootCommand.SetHandler(async (path, failOnSeverity, json, ignore, onlyLatest, format, configPath) =>
+        rootCommand.SetHandler((path, failOnSeverity, json, ignore, onlyLatest, format, configPath) =>
         {
             var migrationsFolder = Path.Combine(path.FullName, "Migrations");
             if (!Directory.Exists(migrationsFolder))
@@ -91,38 +91,14 @@ public static class Program
             else
             {
                 // Human‑readable console output
-                foreach (var finding in report.Findings)
-                {
-                    Console.ForegroundColor = finding.Severity switch
-                    {
-                        LintSeverity.Blocker => ConsoleColor.Red,
-                        LintSeverity.Danger => ConsoleColor.DarkYellow,
-                        LintSeverity.Warning => ConsoleColor.Yellow,
-                        _ => ConsoleColor.White
-                    };
-                    Console.WriteLine($"[{finding.Severity}] {finding.RuleName}: {finding.Message} ({finding.File}:{finding.Line})");
-                    Console.ResetColor();
-                }
+                ConsoleReportWriter.WriteReport(report);
             }
 
-            var highestFindingSeverity = report.Findings.Any()
-                ? report.Findings.Max(f => MapToFindingSeverity(f.Severity))
-                : (LintFindingSeverity?)null;
-
-            if (highestFindingSeverity.HasValue && highestFindingSeverity.Value >= failOnSeverity)
-            {
-                Environment.Exit(1);
-            }
+            // Compute and return the appropriate exit code
+            var exitCode = report.ComputeExitCode(failOnSeverity);
+            Environment.Exit(exitCode);
         }, pathArgument, failOnOption, jsonOption, ignoreOption, onlyLatestOption, formatOption, configOption);
 
-        return await rootCommand.InvokeAsync(args);
+        return rootCommand.InvokeAsync(args).GetAwaiter().GetResult();
     }
-
-    private static LintFindingSeverity MapToFindingSeverity(LintSeverity severity) => severity switch
-    {
-        LintSeverity.Blocker => LintFindingSeverity.Error,
-        LintSeverity.Danger => LintFindingSeverity.Error,
-        LintSeverity.Warning => LintFindingSeverity.Warning,
-        _ => LintFindingSeverity.Info
-    };
 }
