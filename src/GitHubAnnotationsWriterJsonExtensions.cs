@@ -1,20 +1,21 @@
 namespace SqlMigrationLint;
 
+using System;
+using System.Collections.Generic;
 using System.Text.Json;
-using System.Text.Json.Serialization;
+using SqlMigrationLint.JsonSerialization;
 
 /// <summary>
 /// Provides System.Text.Json serialization extensions for <see cref="LintFinding"/>.
 /// </summary>
+/// <remarks>
+/// Superseded by <see cref="LintJsonContext"/> and <see cref="LintJson"/>, which serialize these
+/// types through source generation instead of reflection. Kept only to avoid breaking existing
+/// call sites.
+/// </remarks>
+[Obsolete("Use SqlMigrationLint.JsonSerialization.LintJson with LintJsonContext instead.")]
 public static class GitHubAnnotationsWriterJsonExtensions
 {
-    private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web)
-    {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        WriteIndented = false,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-    };
-
     /// <summary>
     /// Serializes a <see cref="LintFinding"/> to a JSON string.
     /// </summary>
@@ -22,16 +23,8 @@ public static class GitHubAnnotationsWriterJsonExtensions
     /// <param name="indented">Whether to format the JSON with indentation for readability.</param>
     /// <returns>A JSON string representation of the finding.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is null.</exception>
-    public static string ToJson(this LintFinding value, bool indented = false)
-    {
-        ArgumentNullException.ThrowIfNull(value);
-
-        var options = indented
-            ? new JsonSerializerOptions(_jsonOptions) { WriteIndented = true }
-            : _jsonOptions;
-
-        return JsonSerializer.Serialize(value, options);
-    }
+    public static string ToJson(this LintFinding value, bool indented = false) =>
+        LintJson.ToJson(value, indented);
 
     /// <summary>
     /// Deserializes a JSON string to a <see cref="LintFinding"/>.
@@ -39,15 +32,8 @@ public static class GitHubAnnotationsWriterJsonExtensions
     /// <param name="json">The JSON string to deserialize.</param>
     /// <returns>A <see cref="LintFinding"/> instance, or null if the JSON is null or empty.</returns>
     /// <exception cref="JsonException">Thrown when the JSON is invalid or cannot be deserialized.</exception>
-    public static LintFinding? FromJson(string? json)
-    {
-        if (string.IsNullOrEmpty(json))
-        {
-            return null;
-        }
-
-        return JsonSerializer.Deserialize<LintFinding>(json, _jsonOptions);
-    }
+    public static LintFinding? FromJson(string? json) =>
+        string.IsNullOrEmpty(json) ? null : LintJson.FromJson<LintFinding>(json);
 
     /// <summary>
     /// Attempts to deserialize a JSON string to a <see cref="LintFinding"/>.
@@ -55,25 +41,10 @@ public static class GitHubAnnotationsWriterJsonExtensions
     /// <param name="json">The JSON string to deserialize.</param>
     /// <param name="value">Receives the deserialized finding if successful.</param>
     /// <returns>True if deserialization succeeded; otherwise, false.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="json"/> is null.</exception>
     public static bool TryFromJson(string json, out LintFinding? value)
     {
         value = null;
-
-        if (string.IsNullOrEmpty(json))
-        {
-            return false;
-        }
-
-        try
-        {
-            value = JsonSerializer.Deserialize<LintFinding>(json, _jsonOptions);
-            return true;
-        }
-        catch (JsonException)
-        {
-            return false;
-        }
+        return !string.IsNullOrEmpty(json) && LintJson.TryFromJson(json, out value);
     }
 
     /// <summary>
@@ -83,16 +54,8 @@ public static class GitHubAnnotationsWriterJsonExtensions
     /// <param name="indented">Whether to format the JSON with indentation for readability.</param>
     /// <returns>A JSON string representation of the findings collection.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is null.</exception>
-    public static string ToJson(this IReadOnlyList<LintFinding> value, bool indented = false)
-    {
-        ArgumentNullException.ThrowIfNull(value);
-
-        var options = indented
-            ? new JsonSerializerOptions(_jsonOptions) { WriteIndented = true }
-            : _jsonOptions;
-
-        return JsonSerializer.Serialize(value, options);
-    }
+    public static string ToJson(this IReadOnlyList<LintFinding> value, bool indented = false) =>
+        LintJson.ToJson(value, indented);
 
     /// <summary>
     /// Deserializes a JSON string to a collection of <see cref="LintFinding"/>.
@@ -100,15 +63,8 @@ public static class GitHubAnnotationsWriterJsonExtensions
     /// <param name="json">The JSON string to deserialize.</param>
     /// <returns>An <see cref="IReadOnlyList{LintFinding}"/> of findings, or null if the JSON is null or empty.</returns>
     /// <exception cref="JsonException">Thrown when the JSON is invalid or cannot be deserialized.</exception>
-    public static IReadOnlyList<LintFinding>? FromJsonToList(string? json)
-    {
-        if (string.IsNullOrEmpty(json))
-        {
-            return null;
-        }
-
-        return JsonSerializer.Deserialize<IReadOnlyList<LintFinding>>(json, _jsonOptions);
-    }
+    public static IReadOnlyList<LintFinding>? FromJsonToList(string? json) =>
+        string.IsNullOrEmpty(json) ? null : LintJson.FromJson<IReadOnlyList<LintFinding>>(json);
 
     /// <summary>
     /// Attempts to deserialize a JSON string to a collection of <see cref="LintFinding"/>.
@@ -116,24 +72,9 @@ public static class GitHubAnnotationsWriterJsonExtensions
     /// <param name="json">The JSON string to deserialize.</param>
     /// <param name="value">Receives the deserialized findings if successful.</param>
     /// <returns>True if deserialization succeeded; otherwise, false.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="json"/> is null.</exception>
     public static bool TryFromJson(string json, out IReadOnlyList<LintFinding>? value)
     {
         value = null;
-
-        if (string.IsNullOrEmpty(json))
-        {
-            return false;
-        }
-
-        try
-        {
-            value = JsonSerializer.Deserialize<IReadOnlyList<LintFinding>>(json, _jsonOptions);
-            return true;
-        }
-        catch (JsonException)
-        {
-            return false;
-        }
+        return !string.IsNullOrEmpty(json) && LintJson.TryFromJson(json, out value);
     }
 }
