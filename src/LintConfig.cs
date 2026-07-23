@@ -92,6 +92,12 @@ public sealed class LintConfig
     }
 
     /// <summary>
+    /// Gets or sets the maximum degree of parallelism for parallel linting operations.
+    /// Defaults to Environment.ProcessorCount if not specified.
+    /// </summary>
+    public int? MaxDegreeOfParallelism { get; set; }
+
+    /// <summary>
     /// Checks if a rule should be evaluated based on configuration.
     /// </summary>
     /// <param name="ruleName">The name of the rule.</param>
