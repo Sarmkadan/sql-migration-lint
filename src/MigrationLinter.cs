@@ -178,8 +178,28 @@ public sealed class MigrationLinter
                 maxRisk = level;
         }
 
-        var report = new LintReport(findings, migrationsScanned, hasBlockers, maxRisk);
-    _lintReport = report;
-    return report;
+        // Post-process findings to detect drop-then-add patterns
+        var processedFindings = DestructiveOperationRulesValidation.DetectDestructiveRecreatePatterns(findings, parsedMigrationFiles);
+
+        bool processedHasBlockers = processedFindings.Any(f => f.Severity == LintSeverity.Blocker);
+        RiskLevel processedMaxRisk = RiskLevel.None;
+
+        foreach (var f in processedFindings)
+        {
+            var level = f.Severity switch
+            {
+                LintSeverity.Blocker => RiskLevel.Blocker,
+                LintSeverity.Danger => RiskLevel.Danger,
+                LintSeverity.Warning => RiskLevel.Warning,
+                _ => RiskLevel.None
+            };
+
+            if (level > processedMaxRisk)
+                processedMaxRisk = level;
+        }
+
+        var report = new LintReport(processedFindings, migrationsScanned, processedHasBlockers, processedMaxRisk);
+        _lintReport = report;
+        return report;
     }
 }
