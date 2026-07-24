@@ -84,6 +84,23 @@ public sealed class LintReport
             _ => LintFindingSeverity.Info
         };
     }
+
+    /// <summary>
+    /// Merges two reports into one.
+    /// </summary>
+    /// <param name="otherReport">The report to merge with this one.</param>
+    /// <returns>A new report that contains all findings from both reports.</returns>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="otherReport"/> is null.</exception>
+    public LintReport Merge(LintReport otherReport)
+    {
+        ArgumentNullException.ThrowIfNull(otherReport);
+
+        var allFindings = Findings.Concat(otherReport.Findings).ToList();
+        var hasBlockers = HasBlockers || otherReport.HasBlockers;
+        var maxRisk = MaxRisk > otherReport.MaxRisk ? MaxRisk : otherReport.MaxRisk;
+
+        return new LintReport(allFindings, MigrationsScanned + otherReport.MigrationsScanned, hasBlockers, maxRisk);
+    }
 }
 
 /// <summary>
