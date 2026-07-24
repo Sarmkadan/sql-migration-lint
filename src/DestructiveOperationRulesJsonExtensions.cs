@@ -22,7 +22,8 @@ public static class DestructiveOperationRulesJsonExtensions
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         WriteIndented = false,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        MaxDepth = 1024 // Explicitly set MaxDepth to prevent stack overflow attacks
     };
 
     /// <summary>
@@ -49,10 +50,18 @@ public static class DestructiveOperationRulesJsonExtensions
     /// <param name="json">The JSON string to deserialize. Must not be null or empty.</param>
     /// <returns>A collection of lint rules, or null if the JSON represents a null value.</returns>
     /// <exception cref="ArgumentException">Thrown if <paramref name="json"/> is null or empty.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> exceeds maximum allowed size.</exception>
     /// <exception cref="JsonException">Thrown if the JSON is invalid or cannot be deserialized.</exception>
     public static IReadOnlyList<ILintRule>? FromJson(string json)
     {
         ArgumentException.ThrowIfNullOrEmpty(json);
+
+        if (json.Length > SqlMigrationLint.JsonSerialization.LintJson.MaxJsonSizeBytes)
+        {
+            throw new ArgumentException(
+                $"JSON input exceeds maximum allowed size of {SqlMigrationLint.JsonSerialization.LintJson.MaxJsonSizeBytes} bytes. " +
+                $"Actual size: {json.Length} bytes.");
+        }
 
         return JsonSerializer.Deserialize<ILintRule[]>(json, _jsonOptions);
     }
@@ -63,14 +72,26 @@ public static class DestructiveOperationRulesJsonExtensions
     /// <param name="json">The JSON string to deserialize. Must not be null or empty.</param>
     /// <param name="value">Receives the deserialized collection of lint rules, or null if deserialization fails.</param>
     /// <returns>True if deserialization succeeds; otherwise, false.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> exceeds maximum allowed size.</exception>
     public static bool TryFromJson(string json, out IReadOnlyList<ILintRule>? value)
     {
         ArgumentException.ThrowIfNullOrEmpty(json);
 
         try
         {
+            if (json.Length > SqlMigrationLint.JsonSerialization.LintJson.MaxJsonSizeBytes)
+            {
+                throw new ArgumentException(
+                    $"JSON input exceeds maximum allowed size of {SqlMigrationLint.JsonSerialization.LintJson.MaxJsonSizeBytes} bytes. " +
+                    $"Actual size: {json.Length} bytes.");
+            }
+
             value = JsonSerializer.Deserialize<ILintRule[]>(json, _jsonOptions);
             return true;
+        }
+        catch (ArgumentException)
+        {
+            throw;
         }
         catch (JsonException)
         {
