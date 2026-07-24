@@ -66,8 +66,14 @@ public sealed class MigrationLinter
         allRules.Add(EmptyDownRule.Instance);
         allRules.Add(MissingWhereRule.Instance);
 
+        var fileScopedRules = new List<IPerFileLintRule>
+        {
+            new NamingConventionRule(),
+            new MissingDownMigrationRule()
+        };
+
         // No global rules by default
-        return new MigrationLinter(allRules, config: config);
+        return new MigrationLinter(allRules, config: config, fileScopedRules: fileScopedRules);
     }
 
     /// <summary>
@@ -88,7 +94,13 @@ public sealed class MigrationLinter
         var globalRules = new List<IGlobalLintRule>();
         globalRules.Add(DuplicateMigrationVersionRule.Instance);
 
-        return new MigrationLinter(allRules, globalRules, config: config);
+        var fileScopedRules = new List<IPerFileLintRule>
+        {
+            new NamingConventionRule(),
+            new MissingDownMigrationRule()
+        };
+
+        return new MigrationLinter(allRules, globalRules, config: config, fileScopedRules: fileScopedRules);
     }
 
     /// <summary>
