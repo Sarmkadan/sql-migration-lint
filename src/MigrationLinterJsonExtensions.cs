@@ -9,7 +9,13 @@ namespace SqlMigrationLint;
 /// <remarks>
 /// This static class offers extension methods for serializing and deserializing <see cref="MigrationLinter"/> instances
 /// to and from JSON format, supporting both compact and indented output.
+/// Obsolete: kept only because <see cref="MigrationLinter"/> is a service class relying on the
+/// reflection-based <see cref="DefaultJsonTypeInfoResolver"/> and is not a DTO registered on the
+/// source-generated <c>SqlMigrationLint.JsonSerialization.LintJsonContext</c>. New code that needs
+/// to serialize the linter's DTOs (<c>LintReport</c>, <c>LintFinding</c>, <c>LintConfig</c>, ...)
+/// should use <c>SqlMigrationLint.JsonSerialization.LintJson</c> directly.
 /// </remarks>
+[Obsolete("Prefer SqlMigrationLint.JsonSerialization.LintJson backed by the source-generated LintJsonContext for the linter's DTOs; this reflection-based helper remains only for serializing the MigrationLinter service instance itself.")]
 public static class MigrationLinterJsonExtensions
 {
     private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web)

@@ -1,25 +1,21 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
-using System.Text.Json.Serialization;
+using SqlMigrationLint.JsonSerialization;
 
 namespace SqlMigrationLint
 {
     /// <summary>
     /// Provides System.Text.Json serialization extensions for <see cref="IReadOnlyList{T}"/> where T is <see cref="string"/>.
     /// </summary>
+    /// <remarks>
+    /// Obsolete: superseded by the source-generated <see cref="LintJsonContext"/>, exposed through
+    /// <see cref="LintJson"/>. That single context replaces the reflection-based
+    /// <see cref="JsonSerializerOptions"/> construction previously duplicated in this class.
+    /// </remarks>
+    [Obsolete("Use SqlMigrationLint.JsonSerialization.LintJson instead, which is backed by the source-generated LintJsonContext.")]
     public static class MigrationFileValidationJsonExtensions
     {
-        /// <summary>
-        /// JSON serialization options with camelCase naming convention.
-        /// </summary>
-        private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            WriteIndented = false,
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-        };
-
         /// <summary>
         /// Serializes a collection of migration file validation problems to a JSON string.
         /// </summary>
@@ -31,11 +27,7 @@ namespace SqlMigrationLint
         {
             ArgumentNullException.ThrowIfNull(value);
 
-            var options = indented
-                ? new JsonSerializerOptions(JsonOptions) { WriteIndented = true }
-                : JsonOptions;
-
-            return JsonSerializer.Serialize(value, options);
+            return LintJson.ToJson(value, indented);
         }
 
         /// <summary>
@@ -51,7 +43,7 @@ namespace SqlMigrationLint
             ArgumentNullException.ThrowIfNull(json);
             ArgumentException.ThrowIfNullOrWhiteSpace(json);
 
-            return JsonSerializer.Deserialize<IReadOnlyList<string>>(json.Trim(), JsonOptions);
+            return LintJson.FromJson<IReadOnlyList<string>>(json.Trim());
         }
 
         /// <summary>
@@ -60,8 +52,6 @@ namespace SqlMigrationLint
         /// <param name="json">The JSON string to deserialize.</param>
         /// <param name="value">Receives the deserialized collection of validation problems if successful; otherwise, null.</param>
         /// <returns>True if deserialization succeeds; otherwise, false.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when <paramref name="json"/> is null.</exception>
-        /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is empty or whitespace.</exception>
         public static bool TryFromJson(string json, out IReadOnlyList<string>? value)
         {
             value = null;
@@ -71,16 +61,7 @@ namespace SqlMigrationLint
                 return false;
             }
 
-            try
-            {
-                value = JsonSerializer.Deserialize<IReadOnlyList<string>>(json.Trim(), JsonOptions);
-                return true;
-            }
-            catch (JsonException)
-            {
-                return false;
-            }
+            return LintJson.TryFromJson(json.Trim(), out value);
         }
-
     }
 }

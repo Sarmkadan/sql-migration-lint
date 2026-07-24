@@ -9,6 +9,13 @@ namespace SqlMigrationLint;
 /// Provides JSON serialization and deserialization helpers for collections of <see cref="ILintRule"/>
 /// that implement destructive operation detection rules.
 /// </summary>
+/// <remarks>
+/// Obsolete: kept only because <see cref="ILintRule"/> is a polymorphic interface that is not
+/// registered on the source-generated <c>SqlMigrationLint.JsonSerialization.LintJsonContext</c>.
+/// Prefer registering concrete rule types on that context and using
+/// <c>SqlMigrationLint.JsonSerialization.LintJson</c> instead of adding new callers here.
+/// </remarks>
+[Obsolete("Prefer SqlMigrationLint.JsonSerialization.LintJson backed by the source-generated LintJsonContext; this reflection-based helper remains only for polymorphic ILintRule collections.")]
 public static class DestructiveOperationRulesJsonExtensions
 {
     private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.General)

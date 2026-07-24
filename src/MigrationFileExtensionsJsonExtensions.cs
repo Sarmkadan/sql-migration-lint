@@ -1,6 +1,6 @@
 using System;
 using System.Text.Json;
-using System.Text.Json.Serialization;
+using SqlMigrationLint.JsonSerialization;
 
 namespace SqlMigrationLint
 {
@@ -8,15 +8,14 @@ namespace SqlMigrationLint
     /// Provides JSON serialization and deserialization utilities for configuration
     /// and metadata related to migration file operations.
     /// </summary>
+    /// <remarks>
+    /// Obsolete: superseded by the source-generated <see cref="LintJsonContext"/>, exposed through
+    /// <see cref="LintJson"/>. That single context replaces the reflection-based
+    /// <see cref="JsonSerializerOptions"/> construction previously duplicated in this class.
+    /// </remarks>
+    [Obsolete("Use SqlMigrationLint.JsonSerialization.LintJson instead, which is backed by the source-generated LintJsonContext.")]
     public static class MigrationFileExtensionsJsonExtensions
     {
-        private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.Web)
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            WriteIndented = false,
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-        };
-
         /// <summary>
         /// Serializes an object to a JSON string with camelCase property names.
         /// </summary>
@@ -29,11 +28,7 @@ namespace SqlMigrationLint
         {
             ArgumentNullException.ThrowIfNull(value);
 
-            var options = indented
-                ? new JsonSerializerOptions(_jsonOptions) { WriteIndented = true }
-                : _jsonOptions;
-
-            return JsonSerializer.Serialize(value, options);
+            return LintJson.ToJson(value, indented);
         }
 
         /// <summary>
@@ -48,7 +43,7 @@ namespace SqlMigrationLint
         {
             ArgumentNullException.ThrowIfNull(json);
 
-            return JsonSerializer.Deserialize<T>(json, _jsonOptions);
+            return LintJson.FromJson<T>(json);
         }
 
         /// <summary>
@@ -65,10 +60,9 @@ namespace SqlMigrationLint
 
             try
             {
-                value = JsonSerializer.Deserialize<T>(json, _jsonOptions);
-                return true;
+                return LintJson.TryFromJson(json, out value);
             }
-            catch (JsonException)
+            catch (ArgumentException)
             {
                 value = default;
                 return false;
