@@ -7,6 +7,13 @@ namespace SqlMigrationLint
     /// <summary>
     /// Provides JSON serialization and deserialization helpers for <see cref="MigrationOperation"/>.
     /// </summary>
+    /// <remarks>
+    /// Obsolete: kept only because <see cref="MigrationOperation"/> is an abstract record with
+    /// polymorphic derived types that are not registered on the source-generated
+    /// <c>SqlMigrationLint.JsonSerialization.LintJsonContext</c>. Prefer
+    /// <c>SqlMigrationLint.JsonSerialization.LintJson</c> for the DTOs already registered there.
+    /// </remarks>
+    [Obsolete("Prefer SqlMigrationLint.JsonSerialization.LintJson backed by the source-generated LintJsonContext; this reflection-based helper remains only for the polymorphic MigrationOperation hierarchy.")]
     public static class MigrationOperationJsonExtensions
     {
         /// <summary>
