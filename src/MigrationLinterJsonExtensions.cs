@@ -22,7 +22,8 @@ public static class MigrationLinterJsonExtensions
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         TypeInfoResolver = new DefaultJsonTypeInfoResolver(),
-        WriteIndented = false
+        WriteIndented = false,
+        MaxDepth = 1024 // Explicitly set MaxDepth to prevent stack overflow attacks
     };
 
     /// <summary>
@@ -50,11 +51,19 @@ public static class MigrationLinterJsonExtensions
     /// <returns>A <see cref="MigrationLinter"/> instance populated from the JSON data, or <see langword="null"/> if the JSON represents a null value.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="json"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is empty or consists only of whitespace.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> exceeds maximum allowed size.</exception>
     /// <exception cref="JsonException">Thrown when the JSON is invalid or cannot be deserialized into a <see cref="MigrationLinter"/> instance.</exception>
     public static MigrationLinter? FromJson(string json)
     {
         ArgumentNullException.ThrowIfNull(json);
         ArgumentException.ThrowIfNullOrEmpty(json.Trim());
+
+        if (json.Length > SqlMigrationLint.JsonSerialization.LintJson.MaxJsonSizeBytes)
+        {
+            throw new ArgumentException(
+                $"JSON input exceeds maximum allowed size of {SqlMigrationLint.JsonSerialization.LintJson.MaxJsonSizeBytes} bytes. " +
+                $"Actual size: {json.Length} bytes.");
+        }
 
         return JsonSerializer.Deserialize<MigrationLinter>(json, _jsonOptions);
     }
@@ -67,6 +76,7 @@ public static class MigrationLinterJsonExtensions
     /// <returns><see langword="true"/> if deserialization succeeds; otherwise, <see langword="false"/>.</returns>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="json"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is empty or consists only of whitespace.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> exceeds maximum allowed size.</exception>
     public static bool TryFromJson(string json, out MigrationLinter? value)
     {
         ArgumentNullException.ThrowIfNull(json);
@@ -74,8 +84,19 @@ public static class MigrationLinterJsonExtensions
 
         try
         {
+            if (json.Length > SqlMigrationLint.JsonSerialization.LintJson.MaxJsonSizeBytes)
+            {
+                throw new ArgumentException(
+                    $"JSON input exceeds maximum allowed size of {SqlMigrationLint.JsonSerialization.LintJson.MaxJsonSizeBytes} bytes. " +
+                    $"Actual size: {json.Length} bytes.");
+            }
+
             value = JsonSerializer.Deserialize<MigrationLinter>(json, _jsonOptions);
             return true;
+        }
+        catch (ArgumentException)
+        {
+            throw;
         }
         catch (JsonException)
         {
