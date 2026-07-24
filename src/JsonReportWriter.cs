@@ -1,24 +1,29 @@
-using System.Text.Json;
+using System.IO;
 using System.Linq;
+using System.Text.Json;
 
 namespace SqlMigrationLint;
 
 /// <summary>
-/// Serialises a <see cref="LintReport"/> to JSON. The output contains the overall
-/// report metadata and a simplified list of findings (file, rule name, severity,
-/// message and line when available).
+/// Serialises a <see cref="LintReport"/> to JSON and writes it to a <see cref="TextWriter"/>.
 /// </summary>
-public static class JsonReportWriter
+public class JsonReportWriter : IReportWriter
 {
+    private readonly bool _indented;
+
     /// <summary>
-    /// Returns a JSON string representing the supplied <paramref name="report"/>.
+    /// Creates a new <see cref="JsonReportWriter"/>.
     /// </summary>
-    /// <param name="report">The lint report to serialise.</param>
-    /// <param name="indented">Whether the JSON should be indented.</param>
-    /// <returns>A JSON representation of the report.</returns>
-    public static string WriteReport(LintReport report, bool indented = false)
+    /// <param name="indented">Whether the JSON output should be indented.</param>
+    public JsonReportWriter(bool indented = false)
     {
-        var options = new JsonSerializerOptions { WriteIndented = indented };
+        _indented = indented;
+    }
+
+    /// <inheritdoc/>
+    public void WriteReport(LintReport report, TextWriter writer)
+    {
+        var options = new JsonSerializerOptions { WriteIndented = _indented };
 
         var serialisable = new
         {
@@ -35,6 +40,7 @@ public static class JsonReportWriter
             })
         };
 
-        return JsonSerializer.Serialize(serialisable, options);
+        var json = JsonSerializer.Serialize(serialisable, options);
+        writer.WriteLine(json);
     }
 }

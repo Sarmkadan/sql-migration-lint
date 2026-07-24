@@ -33,11 +33,11 @@ public static class Program
 
         var onlyLatestOption = new Option<int?>("--only-latest", "Lint only the last n migrations.");
 
-        // New format option – supports "text" (default) and "json"
+        // New format option – supports "text" (default), "json", and "github"
         var formatOption = new Option<string>(
             "--format",
             () => "text",
-            "Output format. Supported values: text, json.");
+            "Output format. Supported values: text, json, github.");
 
         var configOption = new Option<string?>("--config", "Path to .sqlmigrationlint.json configuration file.");
 
@@ -75,24 +75,16 @@ public static class Program
             var linter = MigrationLinter.CreateDefaultWithGlobalRules(configPath);
             var report = linter.Lint(path.FullName);
 
-            // Output handling
-            if (format.Equals("json", StringComparison.OrdinalIgnoreCase))
+            // Choose writer based on format flag
+            IReportWriter writer = format.ToLowerInvariant() switch
             {
-                // Full report in JSON format
-                var jsonReport = JsonReportWriter.WriteReport(report, indented: true);
-                Console.WriteLine(jsonReport);
-            }
-            else if (json)
-            {
-                // Legacy simple findings JSON
-                var options = new JsonSerializerOptions { WriteIndented = true };
-                Console.WriteLine(JsonSerializer.Serialize(report.Findings, options));
-            }
-            else
-            {
-                // Human‑readable console output
-                ConsoleReportWriter.WriteReport(report);
-            }
+                "json" => new JsonReportWriter(indented: true),
+                "github" => new GitHubAnnotationsWriter(),
+                _ => new ConsoleReportWriterAdapter()
+            };
+
+            // Write the report to the console (or appropriate output)
+            writer.WriteReport(report, Console.Out);
 
             // Compute and return the appropriate exit code
             var exitCode = report.ComputeExitCode(failOnSeverity);
