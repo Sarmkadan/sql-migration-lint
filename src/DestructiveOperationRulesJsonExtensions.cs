@@ -33,15 +33,23 @@ public static class DestructiveOperationRulesJsonExtensions
     /// <param name="indented">Whether to format the JSON with indentation for readability.</param>
     /// <returns>A JSON string representing the collection of lint rules.</returns>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="value"/> is null.</exception>
+    /// <exception cref="SqlMigrationLintJsonException">Thrown when serialization fails.</exception>
     public static string ToJson(this IReadOnlyList<ILintRule> value, bool indented = false)
     {
         ArgumentNullException.ThrowIfNull(value);
 
-        var options = indented
-            ? new JsonSerializerOptions(_jsonOptions) { WriteIndented = true }
-            : _jsonOptions;
+        try
+        {
+            var options = indented
+                ? new JsonSerializerOptions(_jsonOptions) { WriteIndented = true }
+                : _jsonOptions;
 
-        return JsonSerializer.Serialize(value, options);
+            return JsonSerializer.Serialize(value, options);
+        }
+        catch (JsonException ex)
+        {
+            throw new SqlMigrationLintJsonException("Failed to serialize destructive operation rules to JSON.", ex);
+        }
     }
 
     /// <summary>
@@ -51,10 +59,15 @@ public static class DestructiveOperationRulesJsonExtensions
     /// <returns>A collection of lint rules, or null if the JSON represents a null value.</returns>
     /// <exception cref="ArgumentException">Thrown if <paramref name="json"/> is null or empty.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> exceeds maximum allowed size.</exception>
-    /// <exception cref="JsonException">Thrown if the JSON is invalid or cannot be deserialized.</exception>
+    /// <exception cref="SqlMigrationLintJsonException">Thrown if the JSON is invalid or cannot be deserialized.</exception>
     public static IReadOnlyList<ILintRule>? FromJson(string json)
     {
-        ArgumentException.ThrowIfNullOrEmpty(json);
+        ArgumentNullException.ThrowIfNull(json);
+
+        if (json.Length == 0)
+        {
+            throw new ArgumentException("JSON input cannot be empty.");
+        }
 
         if (json.Length > SqlMigrationLint.JsonSerialization.LintJson.MaxJsonSizeBytes)
         {
@@ -63,7 +76,14 @@ public static class DestructiveOperationRulesJsonExtensions
                 $"Actual size: {json.Length} bytes.");
         }
 
-        return JsonSerializer.Deserialize<ILintRule[]>(json, _jsonOptions);
+        try
+        {
+            return JsonSerializer.Deserialize<ILintRule[]>(json, _jsonOptions);
+        }
+        catch (JsonException ex)
+        {
+            throw new SqlMigrationLintJsonException("Failed to deserialize JSON to destructive operation rules collection.", ex);
+        }
     }
 
     /// <summary>
@@ -72,13 +92,19 @@ public static class DestructiveOperationRulesJsonExtensions
     /// <param name="json">The JSON string to deserialize. Must not be null or empty.</param>
     /// <param name="value">Receives the deserialized collection of lint rules, or null if deserialization fails.</param>
     /// <returns>True if deserialization succeeds; otherwise, false.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="json"/> is null.</exception>
     /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> exceeds maximum allowed size.</exception>
     public static bool TryFromJson(string json, out IReadOnlyList<ILintRule>? value)
     {
-        ArgumentException.ThrowIfNullOrEmpty(json);
+        ArgumentNullException.ThrowIfNull(json);
 
         try
         {
+            if (json.Length == 0)
+            {
+                throw new ArgumentException("JSON input cannot be empty.");
+            }
+
             if (json.Length > SqlMigrationLint.JsonSerialization.LintJson.MaxJsonSizeBytes)
             {
                 throw new ArgumentException(

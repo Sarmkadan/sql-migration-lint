@@ -24,11 +24,18 @@ namespace SqlMigrationLint
         /// <param name="indented">Whether to format the JSON with indentation for readability.</param>
         /// <returns>A JSON string representation of the object.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="value"/> is null.</exception>
+        /// <exception cref="SqlMigrationLintJsonException">Thrown when serialization fails.</exception>
         public static string ToJson<T>(this T value, bool indented = false)
         {
-            ArgumentNullException.ThrowIfNull(value);
-
-            return LintJson.ToJson(value, indented);
+            try
+            {
+                ArgumentNullException.ThrowIfNull(value);
+                return LintJson.ToJson(value, indented);
+            }
+            catch (JsonException ex)
+            {
+                throw new SqlMigrationLintJsonException("Failed to serialize object to JSON.", ex);
+            }
         }
 
         /// <summary>
@@ -38,12 +45,24 @@ namespace SqlMigrationLint
         /// <param name="json">The JSON string to deserialize.</param>
         /// <returns>An instance of type <typeparamref name="T"/> if deserialization succeeds, otherwise null.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="json"/> is null.</exception>
-        /// <exception cref="JsonException">Thrown when JSON deserialization fails.</exception>
+        /// <exception cref="SqlMigrationLintJsonException">Thrown when JSON deserialization fails.</exception>
         public static T? FromJson<T>(string json)
         {
             ArgumentNullException.ThrowIfNull(json);
 
-            return LintJson.FromJson<T>(json);
+            if (json.Length == 0)
+            {
+                return default;
+            }
+
+            try
+            {
+                return LintJson.FromJson<T>(json);
+            }
+            catch (JsonException ex)
+            {
+                throw new SqlMigrationLintJsonException($"Failed to deserialize JSON to {typeof(T).Name}.", ex);
+            }
         }
 
         /// <summary>
@@ -58,13 +77,19 @@ namespace SqlMigrationLint
         {
             ArgumentNullException.ThrowIfNull(json);
 
+            value = default;
+
+            if (json.Length == 0)
+            {
+                return false;
+            }
+
             try
             {
                 return LintJson.TryFromJson(json, out value);
             }
             catch (ArgumentException)
             {
-                value = default;
                 return false;
             }
         }

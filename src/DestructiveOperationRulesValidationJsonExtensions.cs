@@ -35,15 +35,25 @@ public static class DestructiveOperationRulesValidationJsonExtensions
     /// </summary>
     /// <param name="json">The JSON string to deserialize.</param>
     /// <returns>A collection of validation problems, or null if the JSON is empty or whitespace.</returns>
-    /// <exception cref="JsonException">Thrown when the JSON is invalid or cannot be deserialized.</exception>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is null or empty.</exception>
+    /// <exception cref="SqlMigrationLintJsonException">Thrown when the JSON is invalid or cannot be deserialized.</exception>
     public static IReadOnlyList<string>? FromJson(string json)
     {
-        if (string.IsNullOrEmpty(json))
+        ArgumentNullException.ThrowIfNull(json);
+
+        if (json.Length == 0)
         {
             return null;
         }
 
-        return LintJson.FromJson<IReadOnlyList<string>>(json.Trim());
+        try
+        {
+            return LintJson.FromJson<IReadOnlyList<string>>(json.Trim());
+        }
+        catch (JsonException ex)
+        {
+            throw new SqlMigrationLintJsonException("Failed to deserialize JSON to destructive operation rules validation collection.", ex);
+        }
     }
 
     /// <summary>
@@ -52,11 +62,14 @@ public static class DestructiveOperationRulesValidationJsonExtensions
     /// <param name="json">The JSON string to deserialize.</param>
     /// <param name="value">Receives the deserialized collection of validation problems if successful; otherwise, null.</param>
     /// <returns>True if deserialization succeeds; otherwise, false.</returns>
+    /// <exception cref="ArgumentException">Thrown when <paramref name="json"/> is null or empty.</exception>
     public static bool TryFromJson(string json, out IReadOnlyList<string>? value)
     {
+        ArgumentNullException.ThrowIfNull(json);
+
         value = null;
 
-        if (string.IsNullOrEmpty(json))
+        if (json.Length == 0)
         {
             return false;
         }
