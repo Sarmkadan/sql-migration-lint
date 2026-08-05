@@ -1,0 +1,13 @@
+<Project>
+  <!--
+    The main project's default SDK item globs would otherwise also pick up the .cs files
+    under tests/, since that directory has no project file exclusion of its own. That causes
+    the main project to try to compile test code (and its test-only package references, e.g.
+    xunit) into the production assembly. Remove tests/**/*.cs from whichever project evaluates
+    this from the repository root; the path is relative to each project directory, so it has
+    no effect on the test project itself (which has no nested "tests" folder).
+  -->
+  <ItemGroup>
+    <Compile Remove="tests/**/*.cs" />
+  </ItemGroup>
+</Project>
