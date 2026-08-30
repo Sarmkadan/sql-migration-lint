@@ -45,6 +45,8 @@ public sealed class LintConfig
     /// <returns>Configured LintConfig or null if file doesn't exist.</returns>
     public static LintConfig? Load(string configPath)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(configPath);
+
         if (!File.Exists(configPath))
         {
             return null;
@@ -59,6 +61,13 @@ public sealed class LintConfig
                 ReadCommentHandling = JsonCommentHandling.Skip,
                 Converters = { new JsonStringEnumConverter() }
             });
+
+            if (config is null)
+            {
+                return null;
+            }
+
+            config.Rules = new Dictionary<string, RuleSeverityConfig>(config.Rules, StringComparer.OrdinalIgnoreCase);
 
             return config;
         }
