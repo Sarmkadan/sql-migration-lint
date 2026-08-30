@@ -10,6 +10,14 @@ namespace SqlMigrationLint;
 
 public static class Program
 {
+    private const string MigrationsFolderName = "Migrations";
+    private const string TextFormatName = "text";
+    private const string JsonFormatName = "json";
+    private const string GitHubFormatName = "github";
+    private const string DesignerFileSuffix = ".Designer.cs";
+    private const string SnapshotFileNameFragment = "Snapshot";
+    private const string CSharpFileSearchPattern = "*.cs";
+
     public static int Main(string[] args)
     {
         var pathArgument = new Argument<DirectoryInfo>("path", "The path to the migrations folder.")
@@ -36,8 +44,8 @@ public static class Program
         // New format option – supports "text" (default), "json", and "github"
         var formatOption = new Option<string>(
             "--format",
-            () => "text",
-            "Output format. Supported values: text, json, github.");
+            () => TextFormatName,
+            $"Output format. Supported values: {TextFormatName}, {JsonFormatName}, {GitHubFormatName}.");
 
         var configOption = new Option<string?>("--config", "Path to .sqlmigrationlint.json configuration file.");
 
@@ -52,16 +60,16 @@ public static class Program
 
         rootCommand.SetHandler((path, failOnSeverity, json, ignore, onlyLatest, format, configPath) =>
         {
-            var migrationsFolder = Path.Combine(path.FullName, "Migrations");
+            var migrationsFolder = Path.Combine(path.FullName, MigrationsFolderName);
             if (!Directory.Exists(migrationsFolder))
             {
                 Console.Error.WriteLine($"Migrations folder not found: {migrationsFolder}");
                 Environment.Exit(1);
             }
 
-            var migrationFiles = Directory.EnumerateFiles(migrationsFolder, "*.cs", SearchOption.AllDirectories)
-                .Where(f => !f.EndsWith(".Designer.cs", StringComparison.OrdinalIgnoreCase))
-                .Where(f => !Path.GetFileName(f).Contains("Snapshot", StringComparison.OrdinalIgnoreCase))
+            var migrationFiles = Directory.EnumerateFiles(migrationsFolder, CSharpFileSearchPattern, SearchOption.AllDirectories)
+                .Where(f => !f.EndsWith(DesignerFileSuffix, StringComparison.OrdinalIgnoreCase))
+                .Where(f => !Path.GetFileName(f).Contains(SnapshotFileNameFragment, StringComparison.OrdinalIgnoreCase))
                 .OrderBy(f => Path.GetFileName(f))
                 .ToArray();
 
@@ -78,8 +86,8 @@ public static class Program
             // Choose writer based on format flag
             IReportWriter writer = format.ToLowerInvariant() switch
             {
-                "json" => new JsonReportWriter(indented: true),
-                "github" => new GitHubAnnotationsWriter(),
+                JsonFormatName => new JsonReportWriter(indented: true),
+                GitHubFormatName => new GitHubAnnotationsWriter(),
                 _ => new ConsoleReportWriterAdapter()
             };
 
