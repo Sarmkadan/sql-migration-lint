@@ -28,22 +28,35 @@ internal sealed class MissingWhereRule : ILintRule
 
         // Find UPDATE or DELETE statements.
         // Using Singleline to allow matching across newlines.
-        var matches = Regex.Matches(sqlOperation.Sql, @"\b(UPDATE|DELETE)\b.*?;", RegexOptions.IgnoreCase | RegexOptions.Singleline);
+        var matches = Regex.Matches(sqlOperation.Sql, @"\b(UPDATE|DELETE)\b.*?(?:;|$)", RegexOptions.IgnoreCase | RegexOptions.Singleline);
+
+        var offendingStatementCount = 0;
+        string? firstOffendingStatement = null;
 
         foreach (Match match in matches)
         {
             // Check if the statement contains a WHERE clause.
             if (!Regex.IsMatch(match.Value, @"\bWHERE\b", RegexOptions.IgnoreCase))
             {
-                return new LintFinding(
-                    RuleName: Name,
-                    Severity: Severity,
-                    Message: $"Statement '{match.Value.Trim().Replace(Environment.NewLine, " ")}' is missing a WHERE clause.",
-                    File: sqlOperation.File,
-                    Line: sqlOperation.Line);
+                offendingStatementCount++;
+                firstOffendingStatement ??= match.Value.Trim().Replace(Environment.NewLine, " ");
             }
         }
 
-        return null;
+        if (firstOffendingStatement is null)
+        {
+            return null;
+        }
+
+        var snippet = firstOffendingStatement.Length > 120
+            ? firstOffendingStatement[..120]
+            : firstOffendingStatement;
+
+        return new LintFinding(
+            RuleName: Name,
+            Severity: Severity,
+            Message: $"Found {offendingStatementCount} UPDATE or DELETE statement(s) missing a WHERE clause. First offending statement: '{snippet}'.",
+            File: sqlOperation.File,
+            Line: sqlOperation.Line);
     }
 }
