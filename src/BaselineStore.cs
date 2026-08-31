@@ -48,7 +48,8 @@ public static class BaselineStore
         var json = JsonSerializer.Serialize(fingerprints, options);
 
         // Atomic write: write to temp file in same directory, then move atomically
-        var tempPath = Path.GetTempFileName();
+        var targetDirectory = Path.GetDirectoryName(Path.GetFullPath(path))!;
+        var tempPath = Path.Combine(targetDirectory, $"{Guid.NewGuid():N}.tmp");
         try
         {
             File.WriteAllText(tempPath, json);
