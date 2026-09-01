@@ -78,13 +78,37 @@ public static class Program
                 migrationFiles = migrationFiles.TakeLast(onlyLatest.Value).ToArray();
             }
 
-            var config = configPath != null ? LintConfig.Load(configPath) : null;
-
             var linter = MigrationLinter.CreateDefaultWithGlobalRules(configPath);
             var report = linter.Lint(path.FullName);
 
+            var selectedFiles = migrationFiles.ToHashSet(StringComparer.Ordinal);
+            var ignoredRules = (ignore ?? Array.Empty<string>()).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var filteredFindings = report.Findings
+                .Where(f => !onlyLatest.HasValue || (f.File is not null && selectedFiles.Contains(f.File)))
+                .Where(f => !ignoredRules.Contains(f.RuleName))
+                .ToArray();
+
+            var maxRisk = filteredFindings
+                .Select(f => f.Severity switch
+                {
+                    LintSeverity.Blocker => RiskLevel.Blocker,
+                    LintSeverity.Danger => RiskLevel.Danger,
+                    LintSeverity.Warning => RiskLevel.Warning,
+                    _ => RiskLevel.None
+                })
+                .DefaultIfEmpty(RiskLevel.None)
+                .Max();
+
+            report = new LintReport(
+                filteredFindings,
+                onlyLatest.HasValue ? migrationFiles.Length : report.MigrationsScanned,
+                filteredFindings.Any(f => f.Severity == LintSeverity.Blocker),
+                maxRisk);
+
+            var outputFormat = json ? JsonFormatName : format;
+
             // Choose writer based on format flag
-            IReportWriter writer = format.ToLowerInvariant() switch
+            IReportWriter writer = outputFormat.ToLowerInvariant() switch
             {
                 JsonFormatName => new JsonReportWriter(indented: true),
                 GitHubFormatName => new GitHubAnnotationsWriter(),
