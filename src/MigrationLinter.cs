@@ -87,20 +87,13 @@ public sealed class MigrationLinter
     private static (IReadOnlyList<ILintRule> PerFileRules, IReadOnlyList<IPerFileLintRule> FileScopedRules)
         CreateBuiltInRuleLists()
     {
-        var perFileRules = new List<ILintRule>();
-        perFileRules.AddRange(DestructiveOperationRules.All);
-        perFileRules.AddRange(LockHeavyOperationRules.All);
-        perFileRules.Add(NonConcurrentIndexRule.Instance);
-        perFileRules.Add(EmptyDownRule.Instance);
-        perFileRules.Add(MissingWhereRule.Instance);
-
         var fileScopedRules = new List<IPerFileLintRule>
         {
             new NamingConventionRule(),
             new MissingDownMigrationRule()
         };
 
-        return (perFileRules, fileScopedRules);
+        return (LintRuleRegistry.AllRules, fileScopedRules);
     }
 
     /// <summary>
