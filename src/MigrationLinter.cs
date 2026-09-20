@@ -10,8 +10,8 @@ namespace SqlMigrationLint;
 /// </summary>
 public sealed class MigrationLinter
 {
-    private readonly IReadOnlyList<ILintRule> _perFileRules;
-    private readonly IReadOnlyList<IPerFileLintRule> _perFileFileRules;
+    private readonly IReadOnlyList<ILintRule> _perOperationRules;
+    private readonly IReadOnlyList<IPerFileLintRule> _perFileRules;
     private readonly IReadOnlyList<IGlobalLintRule> _globalRules;
     private readonly LintConfig? _config;
     private LintReport? _lintReport;
@@ -19,11 +19,6 @@ public sealed class MigrationLinter
     /// <summary>
     /// Gets the report from the most recently completed <see cref="Lint(string)"/> call on this instance, if any.
     /// </summary>
-    /// <remarks>
-    /// This compatibility property represents last-run state. When lint operations overlap, it may be replaced by
-    /// whichever operation completes last; callers that need an operation's report should use the value returned by
-    /// that <see cref="Lint(string)"/> call.
-    /// </remarks>
     public LintReport? LintReport => _lintReport;
 
     /// <summary>
@@ -34,25 +29,24 @@ public sealed class MigrationLinter
     /// <summary>
     /// Creates a new <see cref="MigrationLinter"/> with the supplied rules.
     /// </summary>
-    /// <param name="perFileRules">The collection of operation-scoped per-file lint rules to apply.</param>
+    /// <param name="perOperationRules">The collection of operation-scoped lint rules to apply.</param>
     /// <param name="globalRules">The collection of global lint rules to apply.</param>
     /// <param name="config">Optional configuration to override rule severities and disable rules.</param>
-    /// <param name="fileScopedRules">
+    /// <param name="perFileRules">
     /// Optional collection of <see cref="IPerFileLintRule"/> implementations that receive the already-parsed
-    /// <see cref="MigrationFile"/> directly, instead of the <see cref="SqlOperation"/> abstraction used by
-    /// <paramref name="perFileRules"/>.
+    /// <see cref="MigrationFile"/> directly.
     /// </param>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="perFileRules"/> is null.</exception>
+    /// <exception cref="ArgumentNullException">Thrown when <paramref name="perOperationRules"/> is null.</exception>
     public MigrationLinter(
-        IEnumerable<ILintRule> perFileRules,
+        IEnumerable<ILintRule> perOperationRules,
         IEnumerable<IGlobalLintRule>? globalRules = null,
         LintConfig? config = null,
-        IEnumerable<IPerFileLintRule>? fileScopedRules = null)
+        IEnumerable<IPerFileLintRule>? perFileRules = null)
     {
-        ArgumentNullException.ThrowIfNull(perFileRules);
-        _perFileRules = perFileRules.ToArray();
+        ArgumentNullException.ThrowIfNull(perOperationRules);
+        _perOperationRules = perOperationRules.ToArray();
         _globalRules = globalRules?.ToArray() ?? Array.Empty<IGlobalLintRule>();
-        _perFileFileRules = fileScopedRules?.ToArray() ?? Array.Empty<IPerFileLintRule>();
+        _perFileRules = perFileRules?.ToArray() ?? Array.Empty<IPerFileLintRule>();
         _config = config;
     }
 
@@ -63,10 +57,11 @@ public sealed class MigrationLinter
     public static MigrationLinter CreateDefault(string? configPath = null)
     {
         var config = configPath != null ? LintConfig.Load(configPath) : null;
-        var (allRules, fileScopedRules) = CreateBuiltInRuleLists();
-
-        // No global rules by default
-        return new MigrationLinter(allRules, config: config, fileScopedRules: fileScopedRules);
+        return new MigrationLinter(
+            perOperationRules: LintRuleRegistry.PerOperationRules,
+            globalRules: LintRuleRegistry.GlobalRules,
+            config: config,
+            perFileRules: LintRuleRegistry.PerFileRules);
     }
 
     /// <summary>
@@ -76,33 +71,14 @@ public sealed class MigrationLinter
     public static MigrationLinter CreateDefaultWithGlobalRules(string? configPath = null)
     {
         var config = configPath != null ? LintConfig.Load(configPath) : null;
-        var (allRules, fileScopedRules) = CreateBuiltInRuleLists();
-
-        var globalRules = new List<IGlobalLintRule>();
+        var globalRules = LintRuleRegistry.GlobalRules.ToList();
         globalRules.Add(DuplicateMigrationVersionRule.Instance);
 
-        return new MigrationLinter(allRules, globalRules, config: config, fileScopedRules: fileScopedRules);
-    }
-
-    private static (IReadOnlyList<ILintRule> PerFileRules, IReadOnlyList<IPerFileLintRule> FileScopedRules)
-        CreateBuiltInRuleLists()
-    {
-        var fileScopedRules = new List<IPerFileLintRule>
-        {
-            new NamingConventionRule(),
-            new MissingDownMigrationRule()
-        };
-
-        // Add the destructive operation rules (which implement IPerFileLintRule)
-        fileScopedRules.AddRange(DestructiveOperationRules.All.Cast<IPerFileLintRule>());
-
-        // The per-file rules (for ILintRule) should exclude the destructive operation rules
-        // since they are now handled as file-scoped rules.
-        var allRules = LintRuleRegistry.AllRules.ToList();
-        var destructiveOperationRules = DestructiveOperationRules.All.ToList();
-        var perFileRules = allRules.Except(destructiveOperationRules).ToList();
-
-        return (perFileRules, fileScopedRules);
+        return new MigrationLinter(
+            perOperationRules: LintRuleRegistry.PerOperationRules,
+            globalRules: globalRules,
+            config: config,
+            perFileRules: LintRuleRegistry.PerFileRules);
     }
 
     /// <summary>
@@ -119,7 +95,6 @@ public sealed class MigrationLinter
         if (!Directory.Exists(migrationsFolder))
             throw new DirectoryNotFoundException($"Migrations folder not found: {migrationsFolder}");
 
-        // Find *.cs files, excluding Designer files and snapshot files.
         var migrationFiles = Directory.EnumerateFiles(
                 migrationsFolder,
                 "*.cs",
@@ -131,7 +106,6 @@ public sealed class MigrationLinter
         var findings = new List<LintFinding>();
         int migrationsScanned = 0;
 
-        // Parse all migration files first
         var parsedMigrationFiles = new List<MigrationFile>();
         foreach (var file in migrationFiles)
         {
@@ -143,7 +117,6 @@ public sealed class MigrationLinter
             }
         }
 
-        // Apply global rules (operate on all migration files)
         foreach (var globalRule in _globalRules)
         {
             AddConfiguredFindings(
@@ -153,18 +126,13 @@ public sealed class MigrationLinter
                 () => globalRule.Evaluate(parsedMigrationFiles));
         }
 
-        // Apply per-file rules
         foreach (var file in migrationFiles)
         {
-            // Find the corresponding parsed migration file
             var migrationFile = parsedMigrationFiles.FirstOrDefault(mf => mf.FilePath.Equals(file, StringComparison.Ordinal));
-
             if (migrationFile is null)
                 continue;
 
-            // Apply file-scoped rules directly against the already-parsed migration file,
-            // avoiding any redundant re-parsing of the file from disk.
-            foreach (var fileRule in _perFileFileRules)
+            foreach (var fileRule in _perFileRules)
             {
                 AddConfiguredFindings(
                     findings,
@@ -173,7 +141,6 @@ public sealed class MigrationLinter
                     () => fileRule.Check(migrationFile, _config));
             }
 
-            // Build a generic SqlOperation that represents the Up body of the migration.
             var sqlOperation = new SqlOperation
             {
                 File = file,
@@ -181,7 +148,7 @@ public sealed class MigrationLinter
                 Sql = migrationFile.UpBody ?? string.Empty
             };
 
-            foreach (var rule in _perFileRules)
+            foreach (var rule in _perOperationRules)
             {
                 AddConfiguredFindings(
                     findings,
@@ -210,7 +177,6 @@ public sealed class MigrationLinter
                 maxRisk = level;
         }
 
-        // Post-process findings to detect drop-then-add patterns
         var processedFindings = DestructiveOperationRulesValidation.DetectDestructiveRecreatePatterns(findings, parsedMigrationFiles);
 
         bool processedHasBlockers = processedFindings.Any(f => f.Severity == LintSeverity.Blocker);

@@ -56,14 +56,6 @@ public sealed class MissingDownMigrationRule : ILintRule, IPerFileLintRule
         }
     }
 
-    /// <summary>
-    /// Compares Up and Down operations of a parsed migration file and produces a finding when
-    /// Up operations lack a corresponding Down counterpart.
-    /// </summary>
-    /// <param name="migrationFile">The parsed migration file.</param>
-    /// <param name="file">The file path to attach to the finding.</param>
-    /// <param name="line">The line number to attach to the finding.</param>
-    /// <returns>A finding describing the missing Down operations, or null if none are missing.</returns>
     private LintFinding? EvaluateFile(MigrationFile migrationFile, string file, int? line)
     {
         if (string.IsNullOrWhiteSpace(migrationFile.UpBody))
@@ -106,19 +98,16 @@ public sealed class MissingDownMigrationRule : ILintRule, IPerFileLintRule
     {
         var operations = new List<MigrationOperationIdentifier>();
 
-        // CreateTable
         foreach (Match match in Regex.Matches(body, @"CreateTable\(name:\s*""(?<name>[^""]+)"""))
         {
             operations.Add(new MigrationOperationIdentifier("Table", match.Groups["name"].Value));
         }
 
-        // CreateIndex
         foreach (Match match in Regex.Matches(body, @"CreateIndex\(name:\s*""(?<name>[^""]+)"""))
         {
             operations.Add(new MigrationOperationIdentifier("Index", match.Groups["name"].Value));
         }
 
-        // AddColumn
         foreach (Match match in Regex.Matches(body, @"AddColumn<\w+>\(name:\s*""(?<name>[^""]+)"",\s*table:\s*""(?<table>[^""]+)"""))
         {
             operations.Add(new MigrationOperationIdentifier("Column", $"{match.Groups["table"].Value}.{match.Groups["name"].Value}"));
@@ -131,19 +120,16 @@ public sealed class MissingDownMigrationRule : ILintRule, IPerFileLintRule
     {
         var operations = new HashSet<MigrationOperationIdentifier>();
 
-        // DropTable
         foreach (Match match in Regex.Matches(body, @"DropTable\(name:\s*""(?<name>[^""]+)"""))
         {
             operations.Add(new MigrationOperationIdentifier("Table", match.Groups["name"].Value));
         }
 
-        // DropIndex
         foreach (Match match in Regex.Matches(body, @"DropIndex\(name:\s*""(?<name>[^""]+)"""))
         {
             operations.Add(new MigrationOperationIdentifier("Index", match.Groups["name"].Value));
         }
 
-        // DropColumn
         foreach (Match match in Regex.Matches(body, @"DropColumn\(name:\s*""(?<name>[^""]+)"",\s*table:\s*""(?<table>[^""]+)"""))
         {
             operations.Add(new MigrationOperationIdentifier("Column", $"{match.Groups["table"].Value}.{match.Groups["name"].Value}"));

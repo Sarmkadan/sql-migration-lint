@@ -22,36 +22,6 @@ public static class DestructiveOperationRules
         DropDataRule.Instance
     ];
 
-    /// <summary>
-    /// Evaluates a per-file rule against a migration file's Up body by adapting it to the
-    /// <see cref="MigrationOperation"/>-based evaluation shared by all destructive operation rules.
-    /// </summary>
-    /// <param name="rule">The rule to evaluate.</param>
-    /// <param name="file">The parsed migration file to check.</param>
-    /// <returns>A collection of lint findings; empty if the file has no issues for this rule.</returns>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="rule"/> or <paramref name="file"/> is null.</exception>
-    private static IEnumerable<LintFinding> CheckAgainstUpBody(ILintRule rule, MigrationFile file)
-    {
-        ArgumentNullException.ThrowIfNull(rule);
-        ArgumentNullException.ThrowIfNull(file);
-
-        var sqlOperation = new SqlOperation
-        {
-            File = file.FilePath,
-            Line = 1,
-            Sql = file.UpBody ?? string.Empty
-        };
-
-        if (rule.AppliesTo(sqlOperation))
-        {
-            var finding = rule.Evaluate(sqlOperation);
-            if (finding is not null)
-            {
-                yield return finding;
-            }
-        }
-    }
-
     private sealed class DropTableRule : ILintRule, IPerFileLintRule
     {
         public static readonly DropTableRule Instance = new();
@@ -60,15 +30,11 @@ public static class DestructiveOperationRules
         public string Description => "Detects DROP TABLE statements which permanently remove tables and their data.";
         public LintSeverity Severity => LintSeverity.Blocker;
 
-
         public bool AppliesTo(MigrationOperation operation) => operation is SqlOperation;
 
         public LintFinding? Evaluate(MigrationOperation operation)
         {
-            if (operation is not SqlOperation sqlOp)
-            {
-                return null;
-            }
+            if (operation is not SqlOperation sqlOp) return null;
 
             var match = Regex.Match(sqlOp.Sql, @"DROP\s+TABLE\s+[^;]+;", RegexOptions.IgnoreCase);
             if (match.Success)
@@ -78,16 +44,11 @@ public static class DestructiveOperationRules
                     Severity: Severity,
                     Message: "DROP TABLE statement permanently removes tables and their data. Consider backing up or using a soft delete approach.",
                     File: sqlOp.File,
-                    Line: sqlOp.Line
-                );
+                    Line: sqlOp.Line);
             }
-
             return null;
         }
 
-        /// <summary>
-        /// Gets the unique rule name used for configuration lookups, identical to <see cref="Name"/>.
-        /// </summary>
         string IPerFileLintRule.RuleName => Name;
 
         /// <summary>
@@ -100,7 +61,8 @@ public static class DestructiveOperationRules
         public IEnumerable<LintFinding> Check(MigrationFile file, LintConfig? config)
         {
             ArgumentNullException.ThrowIfNull(file);
-            return CheckAgainstUpBody(this, file);
+            var sqlOp = new SqlOperation { File = file.FilePath, Line = 1, Sql = file.UpBody ?? string.Empty };
+            return AppliesTo(sqlOp) ? [Evaluate(sqlOp)!] : [];
         }
     }
 
@@ -116,10 +78,7 @@ public static class DestructiveOperationRules
 
         public LintFinding? Evaluate(MigrationOperation operation)
         {
-            if (operation is not SqlOperation sqlOp)
-            {
-                return null;
-            }
+            if (operation is not SqlOperation sqlOp) return null;
 
             var match = Regex.Match(sqlOp.Sql, @"DROP\s+COLUMN\s+[^;]+;", RegexOptions.IgnoreCase);
             if (match.Success)
@@ -129,16 +88,11 @@ public static class DestructiveOperationRules
                     Severity: Severity,
                     Message: "DROP COLUMN statement permanently removes columns and their data. Consider backing up or using a soft delete approach.",
                     File: sqlOp.File,
-                    Line: sqlOp.Line
-                );
+                    Line: sqlOp.Line);
             }
-
             return null;
         }
 
-        /// <summary>
-        /// Gets the unique rule name used for configuration lookups, identical to <see cref="Name"/>.
-        /// </summary>
         string IPerFileLintRule.RuleName => Name;
 
         /// <summary>
@@ -151,7 +105,8 @@ public static class DestructiveOperationRules
         public IEnumerable<LintFinding> Check(MigrationFile file, LintConfig? config)
         {
             ArgumentNullException.ThrowIfNull(file);
-            return CheckAgainstUpBody(this, file);
+            var sqlOp = new SqlOperation { File = file.FilePath, Line = 1, Sql = file.UpBody ?? string.Empty };
+            return AppliesTo(sqlOp) ? [Evaluate(sqlOp)!] : [];
         }
     }
 
@@ -167,10 +122,7 @@ public static class DestructiveOperationRules
 
         public LintFinding? Evaluate(MigrationOperation operation)
         {
-            if (operation is not SqlOperation sqlOp)
-            {
-                return null;
-            }
+            if (operation is not SqlOperation sqlOp) return null;
 
             var match = Regex.Match(sqlOp.Sql, @"DROP\s+INDEX\s+[^;]+;", RegexOptions.IgnoreCase);
             if (match.Success)
@@ -180,16 +132,11 @@ public static class DestructiveOperationRules
                     Severity: Severity,
                     Message: "DROP INDEX statement removes an index which may impact query performance.",
                     File: sqlOp.File,
-                    Line: sqlOp.Line
-                );
+                    Line: sqlOp.Line);
             }
-
             return null;
         }
 
-        /// <summary>
-        /// Gets the unique rule name used for configuration lookups, identical to <see cref="Name"/>.
-        /// </summary>
         string IPerFileLintRule.RuleName => Name;
 
         /// <summary>
@@ -202,7 +149,8 @@ public static class DestructiveOperationRules
         public IEnumerable<LintFinding> Check(MigrationFile file, LintConfig? config)
         {
             ArgumentNullException.ThrowIfNull(file);
-            return CheckAgainstUpBody(this, file);
+            var sqlOp = new SqlOperation { File = file.FilePath, Line = 1, Sql = file.UpBody ?? string.Empty };
+            return AppliesTo(sqlOp) ? [Evaluate(sqlOp)!] : [];
         }
     }
 
@@ -218,10 +166,7 @@ public static class DestructiveOperationRules
 
         public LintFinding? Evaluate(MigrationOperation operation)
         {
-            if (operation is not SqlOperation sqlOp)
-            {
-                return null;
-            }
+            if (operation is not SqlOperation sqlOp) return null;
 
             var match = Regex.Match(sqlOp.Sql, @"(sp_rename|ALTER\s+TABLE\s+[^;]+\s+RENAME\s+COLUMN)\s+[^;]+;", RegexOptions.IgnoreCase);
             if (match.Success)
@@ -231,16 +176,11 @@ public static class DestructiveOperationRules
                     Severity: Severity,
                     Message: "Renaming a column may break compatibility in rolling deployments. Consider creating a new column and migrating data instead.",
                     File: sqlOp.File,
-                    Line: sqlOp.Line
-                );
+                    Line: sqlOp.Line);
             }
-
             return null;
         }
 
-        /// <summary>
-        /// Gets the unique rule name used for configuration lookups, identical to <see cref="Name"/>.
-        /// </summary>
         string IPerFileLintRule.RuleName => Name;
 
         /// <summary>
@@ -253,7 +193,8 @@ public static class DestructiveOperationRules
         public IEnumerable<LintFinding> Check(MigrationFile file, LintConfig? config)
         {
             ArgumentNullException.ThrowIfNull(file);
-            return CheckAgainstUpBody(this, file);
+            var sqlOp = new SqlOperation { File = file.FilePath, Line = 1, Sql = file.UpBody ?? string.Empty };
+            return AppliesTo(sqlOp) ? [Evaluate(sqlOp)!] : [];
         }
     }
 
@@ -269,10 +210,7 @@ public static class DestructiveOperationRules
 
         public LintFinding? Evaluate(MigrationOperation operation)
         {
-            if (operation is not SqlOperation sqlOp)
-            {
-                return null;
-            }
+            if (operation is not SqlOperation sqlOp) return null;
 
             var match = Regex.Match(sqlOp.Sql, @"(sp_rename|ALTER\s+TABLE\s+[^;]+\s+RENAME)\s+[^;]+;", RegexOptions.IgnoreCase);
             if (match.Success)
@@ -282,16 +220,11 @@ public static class DestructiveOperationRules
                     Severity: Severity,
                     Message: "Renaming a table may break compatibility in rolling deployments. Consider creating a new table and migrating data instead.",
                     File: sqlOp.File,
-                    Line: sqlOp.Line
-                );
+                    Line: sqlOp.Line);
             }
-
             return null;
         }
 
-        /// <summary>
-        /// Gets the unique rule name used for configuration lookups, identical to <see cref="Name"/>.
-        /// </summary>
         string IPerFileLintRule.RuleName => Name;
 
         /// <summary>
@@ -304,7 +237,8 @@ public static class DestructiveOperationRules
         public IEnumerable<LintFinding> Check(MigrationFile file, LintConfig? config)
         {
             ArgumentNullException.ThrowIfNull(file);
-            return CheckAgainstUpBody(this, file);
+            var sqlOp = new SqlOperation { File = file.FilePath, Line = 1, Sql = file.UpBody ?? string.Empty };
+            return AppliesTo(sqlOp) ? [Evaluate(sqlOp)!] : [];
         }
     }
 
@@ -320,10 +254,7 @@ public static class DestructiveOperationRules
 
         public LintFinding? Evaluate(MigrationOperation operation)
         {
-            if (operation is not SqlOperation sqlOp)
-            {
-                return null;
-            }
+            if (operation is not SqlOperation sqlOp) return null;
 
             var match = Regex.Match(sqlOp.Sql, @"(DELETE\s+FROM|TRUNCATE(?:\s+TABLE)?)\s+[^;]+;", RegexOptions.IgnoreCase);
             if (match.Success)
@@ -333,16 +264,11 @@ public static class DestructiveOperationRules
                     Severity: Severity,
                     Message: "DELETE/TRUNCATE statements permanently remove data. Consider using a soft delete approach or backup strategy.",
                     File: sqlOp.File,
-                    Line: sqlOp.Line
-                );
+                    Line: sqlOp.Line);
             }
-
             return null;
         }
 
-        /// <summary>
-        /// Gets the unique rule name used for configuration lookups, identical to <see cref="Name"/>.
-        /// </summary>
         string IPerFileLintRule.RuleName => Name;
 
         /// <summary>
@@ -355,7 +281,8 @@ public static class DestructiveOperationRules
         public IEnumerable<LintFinding> Check(MigrationFile file, LintConfig? config)
         {
             ArgumentNullException.ThrowIfNull(file);
-            return CheckAgainstUpBody(this, file);
+            var sqlOp = new SqlOperation { File = file.FilePath, Line = 1, Sql = file.UpBody ?? string.Empty };
+            return AppliesTo(sqlOp) ? [Evaluate(sqlOp)!] : [];
         }
     }
 
@@ -371,10 +298,7 @@ public static class DestructiveOperationRules
 
         public LintFinding? Evaluate(MigrationOperation operation)
         {
-            if (operation is not SqlOperation sqlOp)
-            {
-                return null;
-            }
+            if (operation is not SqlOperation sqlOp) return null;
 
             var match = Regex.Match(sqlOp.Sql, @"DROP\s+(TABLE|DATABASE|SCHEMA)\s+[^;]+;", RegexOptions.IgnoreCase);
             if (match.Success)
@@ -384,16 +308,11 @@ public static class DestructiveOperationRules
                     Severity: Severity,
                     Message: "DROP statement permanently removes database objects and their data. Consider backing up or using a soft delete approach.",
                     File: sqlOp.File,
-                    Line: sqlOp.Line
-                );
+                    Line: sqlOp.Line);
             }
-
             return null;
         }
 
-        /// <summary>
-        /// Gets the unique rule name used for configuration lookups, identical to <see cref="Name"/>.
-        /// </summary>
         string IPerFileLintRule.RuleName => Name;
 
         /// <summary>
@@ -406,7 +325,8 @@ public static class DestructiveOperationRules
         public IEnumerable<LintFinding> Check(MigrationFile file, LintConfig? config)
         {
             ArgumentNullException.ThrowIfNull(file);
-            return CheckAgainstUpBody(this, file);
+            var sqlOp = new SqlOperation { File = file.FilePath, Line = 1, Sql = file.UpBody ?? string.Empty };
+            return AppliesTo(sqlOp) ? [Evaluate(sqlOp)!] : [];
         }
     }
 }
