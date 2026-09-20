@@ -26,10 +26,7 @@ public sealed class NamingConventionRule : ILintRule, IPerFileLintRule
         _uqPrefix = uqPrefix;
     }
 
-    public bool AppliesTo(MigrationOperation operation)
-    {
-        return operation is SqlOperation;
-    }
+    public bool AppliesTo(MigrationOperation operation) => operation is SqlOperation;
 
     public LintFinding? Evaluate(MigrationOperation operation)
     {
@@ -38,25 +35,8 @@ public sealed class NamingConventionRule : ILintRule, IPerFileLintRule
             return null;
         }
 
-        // We need to look for CREATE statements or ALTER statements defining these objects
-        // A simple regex approach to find names of created objects.
-        // E.g., CREATE [UNIQUE] INDEX [IX_Name] ...
-        // E.g., ALTER TABLE ... ADD CONSTRAINT [PK_Name] ...
-        // E.g., ALTER TABLE ... ADD CONSTRAINT [FK_Name] ...
-        // E.g., ALTER TABLE ... ADD CONSTRAINT [UQ_Name] ...
-
-        // This is a simplified check.
-        // It might produce false positives, but it fulfills the spec.
-        
-        // Regex patterns for finding names
-        // 1. CREATE [UNIQUE] INDEX Name ON Table(...)
-        // 2. CONSTRAINT Name ...
-        
         var sql = sqlOperation.Sql;
 
-        // Check Index: CREATE [UNIQUE] INDEX ...
-        // Need to extract the name.
-        // Pattern: CREATE(?: UNIQUE)? INDEX (?:IF NOT EXISTS )?(\w+)
         var indexMatch = Regex.Match(sql, @"CREATE(?: UNIQUE)? INDEX (?:IF NOT EXISTS )?(\w+)", RegexOptions.IgnoreCase);
         if (indexMatch.Success)
         {
@@ -72,8 +52,6 @@ public sealed class NamingConventionRule : ILintRule, IPerFileLintRule
             }
         }
         
-        // Check Primary Key/Foreign Key/Unique: ALTER TABLE ... ADD CONSTRAINT Name ...
-        // Pattern: CONSTRAINT (\w+) (?:PRIMARY KEY|FOREIGN KEY|UNIQUE)
         var constraintMatches = Regex.Matches(sql, @"CONSTRAINT (\w+) (PRIMARY KEY|FOREIGN KEY|UNIQUE)", RegexOptions.IgnoreCase);
         foreach (Match match in constraintMatches)
         {
