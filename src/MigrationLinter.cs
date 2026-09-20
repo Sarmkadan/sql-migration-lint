@@ -93,7 +93,16 @@ public sealed class MigrationLinter
             new MissingDownMigrationRule()
         };
 
-        return (LintRuleRegistry.AllRules, fileScopedRules);
+        // Add the destructive operation rules (which implement IPerFileLintRule)
+        fileScopedRules.AddRange(DestructiveOperationRules.All.Cast<IPerFileLintRule>());
+
+        // The per-file rules (for ILintRule) should exclude the destructive operation rules
+        // since they are now handled as file-scoped rules.
+        var allRules = LintRuleRegistry.AllRules.ToList();
+        var destructiveOperationRules = DestructiveOperationRules.All.ToList();
+        var perFileRules = allRules.Except(destructiveOperationRules).ToList();
+
+        return (perFileRules, fileScopedRules);
     }
 
     /// <summary>
