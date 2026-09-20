@@ -97,7 +97,11 @@ public static class DestructiveOperationRules
         /// <param name="config">The active lint configuration, or null if none was loaded.</param>
         /// <returns>A collection of lint findings; empty if the file has no issues.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="file"/> is null.</exception>
-        public IEnumerable<LintFinding> Check(MigrationFile file, LintConfig? config) => CheckAgainstUpBody(this, file);
+        public IEnumerable<LintFinding> Check(MigrationFile file, LintConfig? config)
+        {
+            ArgumentNullException.ThrowIfNull(file);
+            return CheckAgainstUpBody(this, file);
+        }
     }
 
     private sealed class DropColumnRule : ILintRule, IPerFileLintRule
@@ -144,7 +148,11 @@ public static class DestructiveOperationRules
         /// <param name="config">The active lint configuration, or null if none was loaded.</param>
         /// <returns>A collection of lint findings; empty if the file has no issues.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="file"/> is null.</exception>
-        public IEnumerable<LintFinding> Check(MigrationFile file, LintConfig? config) => CheckAgainstUpBody(this, file);
+        public IEnumerable<LintFinding> Check(MigrationFile file, LintConfig? config)
+        {
+            ArgumentNullException.ThrowIfNull(file);
+            return CheckAgainstUpBody(this, file);
+        }
     }
 
     private sealed class DropIndexRule : ILintRule, IPerFileLintRule
@@ -191,7 +199,11 @@ public static class DestructiveOperationRules
         /// <param name="config">The active lint configuration, or null if none was loaded.</param>
         /// <returns>A collection of lint findings; empty if the file has no issues.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="file"/> is null.</exception>
-        public IEnumerable<LintFinding> Check(MigrationFile file, LintConfig? config) => CheckAgainstUpBody(this, file);
+        public IEnumerable<LintFinding> Check(MigrationFile file, LintConfig? config)
+        {
+            ArgumentNullException.ThrowIfNull(file);
+            return CheckAgainstUpBody(this, file);
+        }
     }
 
     private sealed class RenameColumnRule : ILintRule, IPerFileLintRule
@@ -238,7 +250,11 @@ public static class DestructiveOperationRules
         /// <param name="config">The active lint configuration, or null if none was loaded.</param>
         /// <returns>A collection of lint findings; empty if the file has no issues.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="file"/> is null.</exception>
-        public IEnumerable<LintFinding> Check(MigrationFile file, LintConfig? config) => CheckAgainstUpBody(this, file);
+        public IEnumerable<LintFinding> Check(MigrationFile file, LintConfig? config)
+        {
+            ArgumentNullException.ThrowIfNull(file);
+            return CheckAgainstUpBody(this, file);
+        }
     }
 
     private sealed class RenameTableRule : ILintRule, IPerFileLintRule
@@ -285,7 +301,11 @@ public static class DestructiveOperationRules
         /// <param name="config">The active lint configuration, or null if none was loaded.</param>
         /// <returns>A collection of lint findings; empty if the file has no issues.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="file"/> is null.</exception>
-        public IEnumerable<LintFinding> Check(MigrationFile file, LintConfig? config) => CheckAgainstUpBody(this, file);
+        public IEnumerable<LintFinding> Check(MigrationFile file, LintConfig? config)
+        {
+            ArgumentNullException.ThrowIfNull(file);
+            return CheckAgainstUpBody(this, file);
+        }
     }
 
     private sealed class DeleteDataRule : ILintRule, IPerFileLintRule
@@ -332,7 +352,11 @@ public static class DestructiveOperationRules
         /// <param name="config">The active lint configuration, or null if none was loaded.</param>
         /// <returns>A collection of lint findings; empty if the file has no issues.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="file"/> is null.</exception>
-        public IEnumerable<LintFinding> Check(MigrationFile file, LintConfig? config) => CheckAgainstUpBody(this, file);
+        public IEnumerable<LintFinding> Check(MigrationFile file, LintConfig? config)
+        {
+            ArgumentNullException.ThrowIfNull(file);
+            return CheckAgainstUpBody(this, file);
+        }
     }
 
     private sealed class DropDataRule : ILintRule, IPerFileLintRule
@@ -379,6 +403,10 @@ public static class DestructiveOperationRules
         /// <param name="config">The active lint configuration, or null if none was loaded.</param>
         /// <returns>A collection of lint findings; empty if the file has no issues.</returns>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="file"/> is null.</exception>
-        public IEnumerable<LintFinding> Check(MigrationFile file, LintConfig? config) => CheckAgainstUpBody(this, file);
+        public IEnumerable<LintFinding> Check(MigrationFile file, LintConfig? config)
+        {
+            ArgumentNullException.ThrowIfNull(file);
+            return CheckAgainstUpBody(this, file);
+        }
     }
 }
