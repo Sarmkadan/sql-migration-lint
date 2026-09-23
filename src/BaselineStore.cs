@@ -74,12 +74,12 @@ public static class BaselineStore
 
     /// <summary>
     /// Loads a baseline file and returns the set of stored fingerprints.
-    /// If the file does not exist, is empty, or cannot be parsed, an empty set is returned.
     /// </summary>
     /// <param name="path">The baseline file path.</param>
     /// <returns>A read‑only set of fingerprint strings.</returns>
     /// <exception cref="ArgumentNullException"><paramref name="path"/> is <see langword="null"/>.</exception>
     /// <exception cref="ArgumentException"><paramref name="path"/> is empty or consists only of whitespace.</exception>
+    /// <exception cref="BaselineStoreException">Thrown when the baseline file is missing, unreadable, or contains malformed JSON.</exception>
     public static IReadOnlySet<string> LoadBaseline(string path)
     {
         ArgumentNullException.ThrowIfNull(path);
@@ -87,7 +87,7 @@ public static class BaselineStore
 
         if (!File.Exists(path))
         {
-            return new HashSet<string>();
+            throw new BaselineStoreException(path, new FileNotFoundException($"Baseline file not found: {path}", path));
         }
 
         try
@@ -95,17 +95,23 @@ public static class BaselineStore
             var json = File.ReadAllText(path);
             if (string.IsNullOrWhiteSpace(json))
             {
-                // Empty file - treat as missing baseline
-                return new HashSet<string>();
+                throw new BaselineStoreException(path, new JsonException("Baseline file is empty or contains only whitespace."));
             }
 
             var fingerprints = JsonSerializer.Deserialize<string[]>(json) ?? Array.Empty<string>();
             return new HashSet<string>(fingerprints);
         }
-        catch
+        catch (IOException ex)
         {
-            // If anything goes wrong (corrupt JSON, IO error, etc.) we fall back to an empty baseline.
-            return new HashSet<string>();
+            throw new BaselineStoreException(path, ex);
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            throw new BaselineStoreException(path, ex);
+        }
+        catch (JsonException ex)
+        {
+            throw new BaselineStoreException(path, ex);
         }
     }
 
