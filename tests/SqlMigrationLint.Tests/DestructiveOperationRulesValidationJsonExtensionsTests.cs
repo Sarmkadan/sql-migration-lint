@@ -1,1 +1,0 @@
-// tests/SqlMigrationLint.Tests/DestructiveOperationRulesValidationJsonExtensionsTests.cs
