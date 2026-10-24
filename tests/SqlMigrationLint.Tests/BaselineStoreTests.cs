@@ -45,4 +45,40 @@ public class BaselineStoreTests
         Assert.Equal(path, ex.FilePath);
         Assert.IsType<JsonException>(ex.InnerException);
     }
+
+    [Fact]
+    public void LoadBaseline_DirectoryPath_ThrowsBaselineStoreExceptionNamingDirectory()
+    {
+        var path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(path);
+        try
+        {
+            var ex = Assert.Throws<BaselineStoreException>(() => BaselineStore.LoadBaseline(path));
+            Assert.Equal(path, ex.FilePath);
+            Assert.Contains("is a directory", ex.Message);
+            Assert.IsType<IOException>(ex.InnerException);
+        }
+        finally
+        {
+            Directory.Delete(path);
+        }
+    }
+
+    [Fact]
+    public void WriteBaseline_DirectoryPath_ThrowsIOExceptionNamingDirectory()
+    {
+        var path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(path);
+        try
+        {
+            var report = new LintReport(Array.Empty<LintFinding>(), 0, false, RiskLevel.None);
+
+            var ex = Assert.Throws<IOException>(() => BaselineStore.WriteBaseline(path, report));
+            Assert.Contains("is a directory", ex.Message);
+        }
+        finally
+        {
+            Directory.Delete(path);
+        }
+    }
 }

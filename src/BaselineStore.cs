@@ -35,6 +35,11 @@ public static class BaselineStore
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
         ArgumentNullException.ThrowIfNull(report);
 
+        if (Directory.Exists(path))
+        {
+            throw new IOException($"Baseline path is a directory, not a file: {path}");
+        }
+
         // Sort findings deterministically to ensure stable baseline diffs in git
         // Order by File (alphabetically), then Line (numerically), then RuleName (alphabetically)
         var fingerprints = report.Findings
@@ -84,6 +89,11 @@ public static class BaselineStore
     {
         ArgumentNullException.ThrowIfNull(path);
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
+
+        if (Directory.Exists(path))
+        {
+            throw new BaselineStoreException(path, new IOException($"Baseline path is a directory, not a file: {path}"));
+        }
 
         if (!File.Exists(path))
         {

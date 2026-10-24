@@ -78,7 +78,18 @@ public static class Program
                 migrationFiles = migrationFiles.TakeLast(onlyLatest.Value).ToArray();
             }
 
-            var linter = MigrationLinter.CreateDefaultWithGlobalRules(configPath);
+            MigrationLinter linter;
+            try
+            {
+                linter = MigrationLinter.CreateDefaultWithGlobalRules(configPath);
+            }
+            catch (InvalidOperationException ex)
+            {
+                Console.Error.WriteLine(ex.Message);
+                Environment.Exit(1);
+                return;
+            }
+
             var report = linter.Lint(path.FullName);
 
             var selectedFiles = migrationFiles.ToHashSet(StringComparer.Ordinal);

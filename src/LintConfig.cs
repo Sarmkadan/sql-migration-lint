@@ -38,11 +38,15 @@ public sealed class LintConfig
     public Dictionary<string, RuleSeverityConfig> Rules { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
-    /// Loads configuration from a .sqlmigrationlint.json file.
+    /// Loads configuration from a .sqlmigrationlint.json file and validates it once, at load time.
     /// If the file doesn't exist, returns null (use default configuration).
     /// </summary>
     /// <param name="configPath">Path to the configuration file.</param>
     /// <returns>Configured LintConfig or null if file doesn't exist.</returns>
+    /// <exception cref="InvalidOperationException">
+    /// Thrown when the file is not valid JSON, or when it names an unknown rule, uses a severity other than
+    /// off, warning or error, or sets an invalid option. The message lists every problem and the valid values.
+    /// </exception>
     public static LintConfig? Load(string configPath)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(configPath);
@@ -52,29 +56,45 @@ public sealed class LintConfig
             return null;
         }
 
+        LintConfig? config = null;
+        List<string> problems;
         try
         {
-            var json = File.ReadAllText(configPath);
-            var config = JsonSerializer.Deserialize<LintConfig>(json, new JsonSerializerOptions
+            using var document = JsonDocument.Parse(File.ReadAllText(configPath), new JsonDocumentOptions
             {
-                PropertyNameCaseInsensitive = true,
-                ReadCommentHandling = JsonCommentHandling.Skip,
-                Converters = { new JsonStringEnumConverter() }
+                CommentHandling = JsonCommentHandling.Skip
             });
 
-            if (config is null)
+            // Rules are checked before binding: binding would fail on the first bad severity without naming the allowed set.
+            problems = LintConfigValidation.ValidateRules(document.RootElement).ToList();
+            if (problems.Count == 0)
             {
-                return null;
+                config = document.RootElement.Deserialize<LintConfig>(new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true,
+                    ReadCommentHandling = JsonCommentHandling.Skip,
+                    Converters = { new JsonStringEnumConverter() }
+                });
+
+                if (config is not null)
+                {
+                    config.Rules = new Dictionary<string, RuleSeverityConfig>(config.Rules, StringComparer.OrdinalIgnoreCase);
+                    problems.AddRange(config.Validate());
+                }
             }
-
-            config.Rules = new Dictionary<string, RuleSeverityConfig>(config.Rules, StringComparer.OrdinalIgnoreCase);
-
-            return config;
         }
         catch (Exception ex)
         {
             throw new InvalidOperationException($"Failed to load configuration from {configPath}. Please ensure it's valid JSON.", ex);
         }
+
+        if (problems.Count > 0)
+        {
+            throw new InvalidOperationException(
+                $"Invalid configuration in {configPath}:{Environment.NewLine} - {string.Join($"{Environment.NewLine} - ", problems)}");
+        }
+
+        return config;
     }
 
     /// <summary>
