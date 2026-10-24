@@ -141,6 +141,150 @@ dotnet run --project sql-migration-lint.csproj -- <path> [options]
 | `--only-latest <n>` | Lint only the last `n` migrations. |
 | `--config <path>` | Path to a `.sqlmigrationlint.json` file. |
 
+## Baselines
+
+When you adopt the linter on a codebase that already has findings, record them in a baseline once. After that, fail the build only on findings that are not in the baseline.
+
+The baseline is only available through the library API (`BaselineStore`). The `sql-migration-lint` CLI does not read or write baseline files. The examples below use a small console project in your repository that references the linter.
+
+### Setup
+
+Create `tools/BaselineCheck/BaselineCheck.csproj`, and point the `ProjectReference` at your copy of the linter:
+
+```xml
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="path/to/sql-migration-lint/sql-migration-lint.csproj" />
+  </ItemGroup>
+</Project>
+```
+
+Create `tools/BaselineCheck/Program.cs`:
+
+```csharp
+using SqlMigrationLint;
+
+// usage: baseline-check <write|check> <rootPath> <baselinePath>
+var mode = args[0];
+var root = args[1];
+var baselinePath = args[2];
+
+var report = MigrationLinter.CreateDefault().Lint(root);
+
+if (mode == "write")
+{
+    BaselineStore.WriteBaseline(baselinePath, report, indented: true);
+    Console.WriteLine($"Wrote {report.Findings.Count} fingerprint(s) to {baselinePath}");
+    return 0;
+}
+
+var fresh = BaselineStore.FilterFindings(baselinePath, report).ToArray();
+foreach (var f in fresh)
+{
+    Console.WriteLine($"[{f.Severity}] {f.RuleName}: {f.Message} ({f.File}:{f.Line})");
+}
+
+Console.WriteLine(fresh.Length == 0 ? "No new findings." : $"{fresh.Length} new finding(s).");
+return fresh.Length == 0 ? 0 : 1;
+```
+
+`<rootPath>` is the directory that contains the `Migrations/` folder, the same value you pass to `MigrationLinter.Lint`. In the examples it is `src/Shop`.
+
+### Where the baseline is stored
+
+The baseline is a JSON array of fingerprints, one per finding, in a file you choose. This repository's tests use `.sqlmigrationlint-baseline.json` at the root. Commit it to the repository. Each fingerprint is a SHA-256 hash of the rule name, file path and line number, so the file contains no SQL or file names:
+
+```json
+[
+  "vvnkoFte530FPASTrD8SUeTObuDIrlmzlf6OKkzrfos="
+]
+```
+
+### Generate a baseline
+
+From the repository root:
+
+```bash
+dotnet run --project tools/BaselineCheck -- write src/Shop .sqlmigrationlint-baseline.json
+```
+
+Output:
+
+```text
+Wrote 1 fingerprint(s) to .sqlmigrationlint-baseline.json
+```
+
+The same thing through the API:
+
+```csharp
+var report = MigrationLinter.CreateDefault().Lint("src/Shop");
+BaselineStore.WriteBaseline(".sqlmigrationlint-baseline.json", report, indented: true);
+```
+
+`WriteBaseline` records every finding in the report, including new ones. Only generate a baseline on purpose, in a reviewed commit.
+
+### Lint against the baseline
+
+```bash
+dotnet run --project tools/BaselineCheck -- check src/Shop .sqlmigrationlint-baseline.json
+```
+
+With no new findings, the output is `No new findings.` and the exit code is `0`. With new findings, each one is printed, followed by a count, and the exit code is `1`:
+
+```text
+[Blocker] drop-table: DROP TABLE statement permanently removes tables and their data. Consider backing up or using a soft delete approach. (src/Shop/Migrations/20261024140000_Drop.cs:1)
+[Blocker] drop-database-object: DROP statement permanently removes database objects and their data. Consider backing up or using a soft delete approach. (src/Shop/Migrations/20261024140000_Drop.cs:1)
+2 new finding(s).
+```
+
+The same thing through the API:
+
+```csharp
+var report = MigrationLinter.CreateDefault().Lint("src/Shop");
+var fresh = BaselineStore.FilterFindings(".sqlmigrationlint-baseline.json", report).ToArray();
+```
+
+`FilterFindings` throws `BaselineStoreException` if the baseline file is missing, unreadable, or malformed. Commit the baseline before you enable the CI step.
+
+### Update the baseline after fixing findings
+
+1. Fix the findings, or remove the migrations that contain them.
+2. Run `check`. Fixed findings are no longer reported, so the check passes. Their fingerprints stay in the file until you regenerate it.
+3. To drop the fixed fingerprints, run `write` again and commit the new baseline with the fix.
+
+Fingerprints include the line number. If you edit lines above a baselined finding in the same file, the finding is reported as new. Regenerate the baseline in the same commit as the edit.
+
+Fingerprints also include the file path, as spelled by the root you pass in. Write and check must use the same spelling. A baseline written with `.` does not match a check run with an absolute path. Use the same relative root, such as `src/Shop`, everywhere.
+
+### CI: fail on new findings only
+
+This step runs from the repository root with the same root and baseline paths that were used to generate the baseline:
+
+```yaml
+name: migration-lint
+
+on: [pull_request]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Fail on new migration findings
+        run: dotnet run --project tools/BaselineCheck -- check src/Shop .sqlmigrationlint-baseline.json
+```
+
+The step fails on any new finding, whatever its severity. To fail only on some severities, filter `fresh` by `Severity` in `Program.cs` before printing.
+
 ## Architecture
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the component breakdown, data flow, rule catalog, extension points, and known limitations.
