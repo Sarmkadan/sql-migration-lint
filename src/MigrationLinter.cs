@@ -148,15 +148,11 @@ public sealed class MigrationLinter
                 Sql = migrationFile.UpBody ?? string.Empty
             };
 
-            foreach (var rule in _perOperationRules)
+            EvaluatePerOperationRules(findings, sqlOperation);
+
+            foreach (var addColumn in AddColumnOperationExtractor.Extract(migrationFile))
             {
-                AddConfiguredFindings(
-                    findings,
-                    rule.Name,
-                    rule.Severity,
-                    () => rule.AppliesTo(sqlOperation)
-                        ? new[] { rule.Evaluate(sqlOperation) }.OfType<LintFinding>()
-                        : Array.Empty<LintFinding>());
+                EvaluatePerOperationRules(findings, addColumn);
             }
         }
 
@@ -197,6 +193,20 @@ public sealed class MigrationLinter
         }
 
         return SetLintReport(new LintReport(processedFindings, migrationsScanned, processedHasBlockers, processedMaxRisk));
+    }
+
+    private void EvaluatePerOperationRules(ICollection<LintFinding> findings, MigrationOperation operation)
+    {
+        foreach (var rule in _perOperationRules)
+        {
+            AddConfiguredFindings(
+                findings,
+                rule.Name,
+                rule.Severity,
+                () => rule.AppliesTo(operation)
+                    ? new[] { rule.Evaluate(operation) }.OfType<LintFinding>()
+                    : Array.Empty<LintFinding>());
+        }
     }
 
     private void AddConfiguredFindings(

@@ -86,7 +86,7 @@ public static class DestructiveOperationRules
         {
             ArgumentNullException.ThrowIfNull(file);
             var sqlOp = new SqlOperation { File = file.FilePath, Line = 1, Sql = file.UpBody ?? string.Empty };
-            return AppliesTo(sqlOp) ? [Evaluate(sqlOp)!] : [];
+            return AppliesTo(sqlOp) && Evaluate(sqlOp) is { } finding ? [finding] : [];
         }
     }
 
@@ -154,7 +154,7 @@ public static class DestructiveOperationRules
         {
             ArgumentNullException.ThrowIfNull(file);
             var sqlOp = new SqlOperation { File = file.FilePath, Line = 1, Sql = file.UpBody ?? string.Empty };
-            return AppliesTo(sqlOp) ? [Evaluate(sqlOp)!] : [];
+            return AppliesTo(sqlOp) && Evaluate(sqlOp) is { } finding ? [finding] : [];
         }
     }
 
@@ -222,7 +222,7 @@ public static class DestructiveOperationRules
         {
             ArgumentNullException.ThrowIfNull(file);
             var sqlOp = new SqlOperation { File = file.FilePath, Line = 1, Sql = file.UpBody ?? string.Empty };
-            return AppliesTo(sqlOp) ? [Evaluate(sqlOp)!] : [];
+            return AppliesTo(sqlOp) && Evaluate(sqlOp) is { } finding ? [finding] : [];
         }
     }
 
@@ -290,7 +290,7 @@ public static class DestructiveOperationRules
         {
             ArgumentNullException.ThrowIfNull(file);
             var sqlOp = new SqlOperation { File = file.FilePath, Line = 1, Sql = file.UpBody ?? string.Empty };
-            return AppliesTo(sqlOp) ? [Evaluate(sqlOp)!] : [];
+            return AppliesTo(sqlOp) && Evaluate(sqlOp) is { } finding ? [finding] : [];
         }
     }
 
@@ -358,7 +358,7 @@ public static class DestructiveOperationRules
         {
             ArgumentNullException.ThrowIfNull(file);
             var sqlOp = new SqlOperation { File = file.FilePath, Line = 1, Sql = file.UpBody ?? string.Empty };
-            return AppliesTo(sqlOp) ? [Evaluate(sqlOp)!] : [];
+            return AppliesTo(sqlOp) && Evaluate(sqlOp) is { } finding ? [finding] : [];
         }
     }
 
@@ -426,7 +426,7 @@ public static class DestructiveOperationRules
         {
             ArgumentNullException.ThrowIfNull(file);
             var sqlOp = new SqlOperation { File = file.FilePath, Line = 1, Sql = file.UpBody ?? string.Empty };
-            return AppliesTo(sqlOp) ? [Evaluate(sqlOp)!] : [];
+            return AppliesTo(sqlOp) && Evaluate(sqlOp) is { } finding ? [finding] : [];
         }
     }
 
@@ -494,7 +494,7 @@ public static class DestructiveOperationRules
         {
             ArgumentNullException.ThrowIfNull(file);
             var sqlOp = new SqlOperation { File = file.FilePath, Line = 1, Sql = file.UpBody ?? string.Empty };
-            return AppliesTo(sqlOp) ? [Evaluate(sqlOp)!] : [];
+            return AppliesTo(sqlOp) && Evaluate(sqlOp) is { } finding ? [finding] : [];
         }
     }
 }
