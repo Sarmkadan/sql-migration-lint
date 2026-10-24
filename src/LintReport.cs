@@ -108,8 +108,23 @@ public sealed class LintReport
 /// </summary>
 public enum RiskLevel
 {
+    /// <summary>
+    /// No findings.
+    /// </summary>
     None = 0,
+
+    /// <summary>
+    /// Only warning-level findings.
+    /// </summary>
     Warning = 1,
+
+    /// <summary>
+    /// At least one danger-level finding.
+    /// </summary>
     Danger = 2,
+
+    /// <summary>
+    /// At least one blocker-level finding.
+    /// </summary>
     Blocker = 3
 }

@@ -8,6 +8,9 @@ using SqlMigrationLint;
 
 namespace SqlMigrationLint;
 
+/// <summary>
+/// Command-line entry point for the migration linter.
+/// </summary>
 public static class Program
 {
     private const string MigrationsFolderName = "Migrations";
@@ -18,6 +21,11 @@ public static class Program
     private const string SnapshotFileNameFragment = "Snapshot";
     private const string CSharpFileSearchPattern = "*.cs";
 
+    /// <summary>
+    /// Parses the command line, lints the migrations folder and writes the report.
+    /// </summary>
+    /// <param name="args">The command-line arguments.</param>
+    /// <returns>The exit code computed from the findings and the <c>--fail-on</c> threshold.</returns>
     public static int Main(string[] args)
     {
         var pathArgument = new Argument<DirectoryInfo>("path", "The path to the migrations folder.")

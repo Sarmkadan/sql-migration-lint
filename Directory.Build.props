@@ -1,0 +1,16 @@
+<Project>
+  <!--
+    Shared compiler settings for every project under the repository root (the main tool and the tests).
+    Warnings are errors so that new code cannot regress silently; suppress individual diagnostics
+    at the call site with a justification rather than adding NoWarn here.
+  -->
+  <PropertyGroup>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Deterministic>true</Deterministic>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest</AnalysisLevel>
+  </PropertyGroup>
+</Project>

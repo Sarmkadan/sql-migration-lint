@@ -10,12 +10,19 @@ namespace SqlMigrationLint;
 /// </summary>
 public sealed class MissingDownMigrationRule : ILintRule, IPerFileLintRule
 {
+    /// <inheritdoc />
     public string Name => "ML101";
+
+    /// <inheritdoc />
     public string Description => "Checks that every Up operation has a corresponding Drop operation in the Down body.";
+
+    /// <inheritdoc />
     public LintSeverity Severity => LintSeverity.Warning;
 
+    /// <inheritdoc />
     public bool AppliesTo(MigrationOperation operation) => operation is SqlOperation;
 
+    /// <inheritdoc />
     public LintFinding? Evaluate(MigrationOperation operation)
     {
         if (operation is not SqlOperation sqlOperation || sqlOperation.File is null)
