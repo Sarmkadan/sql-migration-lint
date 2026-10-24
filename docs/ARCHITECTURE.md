@@ -25,6 +25,8 @@ MigrationFile.TryParse(file)          <- text heuristics, no compiler
         |
         v
 SqlOperation { File, Line = 1, Sql = UpBody }
+        +
+AddColumnOperationExtractor: ALTER TABLE ... ADD COLUMN ... DEFAULT -> AddColumnOperation { Line = statement line }
         |
         v
 for each ILintRule: AppliesTo() -> Evaluate() -> LintFinding?
@@ -33,7 +35,7 @@ for each ILintRule: AppliesTo() -> Evaluate() -> LintFinding?
 findings -> max RiskLevel -> console/JSON output -> exit code
 ```
 
-Each migration file is wrapped in exactly one `SqlOperation` whose `Sql` is the whole `Up` body; `Line` is always `1` (per-statement line numbers are not computed - see limitations).
+Each migration file is wrapped in exactly one `SqlOperation` whose `Sql` is the whole `Up` body; `Line` is always `1` (per-statement line numbers are not computed - see limitations). The exception is `ALTER TABLE ... ADD COLUMN ... DEFAULT ...` statements, which `AddColumnOperationExtractor` (`src/AddColumnOperationExtractor.cs`) turns into `AddColumnOperation`s carrying the statement's real line number; only statements with a DEFAULT clause are extracted.
 
 ## Components
 
@@ -66,8 +68,9 @@ Supporting helpers (not used by the CLI path, available to library consumers):
 
 `MigrationOperation` is an abstract record carrying `File`/`Line`. Concrete records:
 
-- `SqlOperation` (raw SQL text) - the only type the CLI currently produces.
-- `AddColumnOperation`, `AlterColumnOperation`, `CreateIndexOperation`, `AddForeignKeyOperation` (+ `ForeignKeyColumn`) - structured operations with the properties the lock-heavy rules need. Nothing in the repo constructs these from migration files yet; they exist for callers that already have structured operation data (e.g. from EF's own model diff).
+- `SqlOperation` (raw SQL text) - the type the CLI produces for every migration.
+- `AddColumnOperation` - also produced by `AddColumnOperationExtractor` for `ALTER TABLE ... ADD COLUMN ... DEFAULT` statements (`TableExists` is set to true, since an ALTER implies an existing table).
+- `AlterColumnOperation`, `CreateIndexOperation`, `AddForeignKeyOperation` (+ `ForeignKeyColumn`) - structured operations with the properties the lock-heavy rules need. Nothing in the repo constructs these from migration files yet; they exist for callers that already have structured operation data (e.g. from EF's own model diff).
 
 ### Rules
 
@@ -78,7 +81,7 @@ All rules implement `ILintRule` (`src/ILintRule.cs`): `Name`, `Description`, `Se
 | Group | Rules | Operates on |
 |---|---|---|
 | `DestructiveOperationRules` | `drop-table`, `drop-column`, `drop-index`, `rename-column`, `rename-table`, `delete-data`, `drop-database-object` | `SqlOperation` (regex on SQL text) |
-| `LockHeavyOperationRules` | `add-column-with-default`, `alter-column-type-change`, `data-loss-alter-column`, `create-index-without-concurrent`, `add-foreign-key-without-index`, `nullable-false-without-default`, `add-not-null-without-default` | structured operations only - never fire from the CLI today, since the CLI produces only `SqlOperation` |
+| `LockHeavyOperationRules` | `add-column-with-default`, `alter-column-type-change`, `data-loss-alter-column`, `create-index-without-concurrent`, `add-foreign-key-without-index`, `nullable-false-without-default`, `add-not-null-without-default` | structured operations. From the CLI only `add-column-with-default` fires today (on `AddColumnOperation`s extracted from raw `ADD COLUMN ... DEFAULT`); the others need structured input the CLI never produces |
 | `EmptyDownRule` | `ML100` - Up non-empty but Down is empty / only `throw` / only comments | `SqlOperation` (re-parses the file to inspect `DownBody`) |
 
 **Implemented but not registered anywhere:** `MissingDownMigrationRule` (`ML101` - matches `CreateTable`/`CreateIndex`/`AddColumn` calls in Up against corresponding Drops in Down) and `NamingConventionRule` (`ML102` - `IX_`/`FK_`/`PK_`/`UQ_` prefixes, configurable via constructor). To use them, pass them to `new MigrationLinter([...])`; they are not in `CreateDefault()` or the CLI rule list.
@@ -90,7 +93,7 @@ Formats findings as GitHub Actions workflow commands (`::error file=...,line=...
 ## Key design decisions
 
 - **Text heuristics over Roslyn/EF model**: no compilation of the target project is needed, so the tool runs on any checkout in seconds. The cost is false negatives/positives on unusual formatting; severity levels and `--ignore` mitigate this.
-- **One `SqlOperation` per migration**: rules see the whole Up body at once. Simple, but a migration triggers each rule at most once and `Line` is always 1.
+- **One `SqlOperation` per migration**: rules see the whole Up body at once. Simple, but a migration triggers each rule at most once and `Line` is always 1. Column additions are the exception: they are extracted per statement so their findings carry the statement's line.
 - **Singleton stateless rules** (`Instance` fields): rules hold no per-run state, so a single instance is safe across files and runs.
 - **Severity split into two enums**: `LintSeverity` (on findings) and `RiskLevel` (ordered, for threshold comparison). The mapping lives in `Program.cs`/`MigrationLinter`. A third enum, `LintFindingSeverity` (`src/LintFindingSeverity.cs`), is currently unused by any code path.
 
@@ -102,7 +105,8 @@ Formats findings as GitHub Actions workflow commands (`::error file=...,line=...
 
 ## Known limitations
 
-- `Line` is always 1; findings point at the file, not the offending statement.
+- `Line` is always 1 for `SqlOperation` findings; findings point at the file, not the offending statement. Only `add-column-with-default` findings carry statement lines.
+- `AddColumnOperationExtractor` splits on `;`, so a final statement without a trailing semicolon is missed, and a `;` inside a string literal ends the statement early.
 - The lock-heavy rule group is dead weight in the CLI path (needs structured operations the CLI never creates).
 - `ML101` and `ML102` exist but are not registered by default.
 - Overlapping regexes produce duplicate findings: a `DROP TABLE x;` fires both `drop-table` and `drop-database-object`; `ALTER TABLE ... RENAME COLUMN` fires both `rename-column` and `rename-table`.
