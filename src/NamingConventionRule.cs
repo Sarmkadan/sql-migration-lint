@@ -14,10 +14,22 @@ public sealed class NamingConventionRule : ILintRule, IPerFileLintRule
     private readonly string _pkPrefix;
     private readonly string _uqPrefix;
 
+    /// <inheritdoc />
     public string Name => "ML102";
+
+    /// <inheritdoc />
     public string Description => "Checks that database objects (indexes, foreign keys, primary keys, unique constraints) follow naming conventions.";
+
+    /// <inheritdoc />
     public LintSeverity Severity => LintSeverity.Warning;
 
+    /// <summary>
+    /// Creates the rule with the expected name prefixes for each object kind.
+    /// </summary>
+    /// <param name="indexPrefix">Required prefix for index names.</param>
+    /// <param name="fkPrefix">Required prefix for foreign key constraint names.</param>
+    /// <param name="pkPrefix">Required prefix for primary key constraint names.</param>
+    /// <param name="uqPrefix">Required prefix for unique constraint names.</param>
     public NamingConventionRule(string indexPrefix = "IX_", string fkPrefix = "FK_", string pkPrefix = "PK_", string uqPrefix = "UQ_")
     {
         _indexPrefix = indexPrefix;
@@ -26,8 +38,10 @@ public sealed class NamingConventionRule : ILintRule, IPerFileLintRule
         _uqPrefix = uqPrefix;
     }
 
+    /// <inheritdoc />
     public bool AppliesTo(MigrationOperation operation) => operation is SqlOperation;
 
+    /// <inheritdoc />
     public LintFinding? Evaluate(MigrationOperation operation)
     {
         if (operation is not SqlOperation sqlOperation)

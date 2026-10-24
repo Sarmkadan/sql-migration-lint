@@ -14,6 +14,9 @@ public sealed class AddColumnWithDefaultRule : ILintRule
     /// </summary>
     public const string RuleId = "add-column-with-default";
 
+    /// <summary>
+    /// Shared instance created with default options.
+    /// </summary>
     public static readonly AddColumnWithDefaultRule Instance = new();
 
     private readonly Regex[] _exemptTablePatterns;
@@ -49,10 +52,16 @@ public sealed class AddColumnWithDefaultRule : ILintRule
             .ToArray();
     }
 
+    /// <inheritdoc />
     public string Name => RuleId;
+
+    /// <inheritdoc />
     public string Description => "Detects ADD COLUMN operations with DEFAULT values on existing tables that cause table rewrites.";
+
+    /// <inheritdoc />
     public LintSeverity Severity => LintSeverity.Warning;
 
+    /// <inheritdoc />
     public bool AppliesTo(MigrationOperation operation)
     {
         ValidateOperation(operation);
@@ -61,6 +70,7 @@ public sealed class AddColumnWithDefaultRule : ILintRule
             && !IsExemptTable(addColumn.TableName);
     }
 
+    /// <inheritdoc />
     public LintFinding? Evaluate(MigrationOperation operation)
     {
         ValidateOperation(operation);
