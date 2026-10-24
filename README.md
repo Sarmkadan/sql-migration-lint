@@ -129,6 +129,22 @@ To disable the check for the whole project, put this in `.sqlmigrationlint.json`
 
 The configuration is checked when it loads. An unknown rule id, or a severity other than `off`, `warning` or `error`, stops the run with exit code `1`. The message lists the valid rule ids and severity values.
 
+Some rules accept options, set under an `options` object keyed by rule id:
+
+```json
+{
+  "options": {
+    "add-column-with-default": {
+      "exemptTablePatterns": ["^__EFMigrationsHistory$", "^Audit_"]
+    }
+  }
+}
+```
+
+- `exemptTablePatterns` (`add-column-with-default`): regular expressions matched against the table name as written in the migration. Matching is case-insensitive and unanchored, so `Audit` also matches `OrderAuditTrail`; use `^Audit$` to match one table exactly. A table name that includes a schema, such as `dbo.Users`, is matched with the schema included.
+
+Option values are checked with the rule ids and severities, and every problem is reported in one message: an unknown option name, a non-array value, or a pattern that is empty or is not a valid regular expression. The message names the bad pattern and the regex error.
+
 ## Command-line options
 
 ```text

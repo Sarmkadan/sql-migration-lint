@@ -9,7 +9,7 @@ internal static class LintRuleRegistry
     /// <summary>
     /// Gets the collection of operation-scoped lint rules.
     /// </summary>
-    public static IReadOnlyList<ILintRule> PerOperationRules { get; } = CreatePerOperationRules();
+    public static IReadOnlyList<ILintRule> PerOperationRules { get; } = CreatePerOperationRules(options: null);
 
     /// <summary>
     /// Gets the collection of file-scoped lint rules.
@@ -38,10 +38,15 @@ internal static class LintRuleRegistry
             .ToArray();
     }
 
-    private static IReadOnlyList<ILintRule> CreatePerOperationRules()
+    /// <summary>
+    /// Creates the operation-scoped rules, applying the per-rule options from configuration where a rule accepts them.
+    /// </summary>
+    /// <param name="options">The per-rule options, or null to use each rule's defaults.</param>
+    /// <returns>The operation-scoped rules.</returns>
+    public static IReadOnlyList<ILintRule> CreatePerOperationRules(LintRuleOptions? options)
     {
         var rules = new List<ILintRule>();
-        rules.AddRange(LockHeavyOperationRules.All);
+        rules.AddRange(LockHeavyOperationRules.Create(options?.AddColumnWithDefault));
         rules.Add(NonConcurrentIndexRule.Instance);
         rules.Add(EmptyDownRule.Instance);
         rules.Add(MissingWhereRule.Instance);

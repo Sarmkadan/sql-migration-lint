@@ -111,6 +111,135 @@ public class LintConfigTests : IDisposable
         Assert.Contains("Please ensure it's valid JSON", ex.Message);
     }
 
+    [Fact]
+    public void Load_OptionsWithExemptTablePatterns_BindsPatterns()
+    {
+        var path = WriteConfig("""
+            {
+              "rules": { "add-column-with-default": "warning" },
+              "options": {
+                "add-column-with-default": {
+                  "exemptTablePatterns": ["^__EFMigrationsHistory$", "^Audit_"]
+                }
+              }
+            }
+            """);
+
+        var config = LintConfig.Load(path);
+
+        Assert.NotNull(config);
+        Assert.Equal(
+            new[] { "^__EFMigrationsHistory$", "^Audit_" },
+            config.Options.AddColumnWithDefault.ExemptTablePatterns);
+    }
+
+    [Fact]
+    public void Load_NoOptionsSection_LeavesOptionsAtDefaults()
+    {
+        var path = WriteConfig("{ \"rules\": { \"drop-table\": \"warning\" } }");
+
+        var config = LintConfig.Load(path);
+
+        Assert.NotNull(config);
+        Assert.Empty(config.Options.AddColumnWithDefault.ExemptTablePatterns);
+    }
+
+    [Fact]
+    public void Load_InvalidExemptPattern_ThrowsWithPatternAndRegexError()
+    {
+        var path = WriteConfig("""
+            {
+              "options": { "add-column-with-default": { "exemptTablePatterns": ["Audit_(" ] } }
+            }
+            """);
+
+        var ex = Assert.Throws<InvalidOperationException>(() => LintConfig.Load(path));
+
+        Assert.Contains("Option 'exemptTablePatterns' of rule 'add-column-with-default' has an invalid pattern at index 0", ex.Message);
+        Assert.Contains("pattern 'Audit_(' is not a valid regular expression", ex.Message);
+    }
+
+    [Fact]
+    public void Load_SeveralProblemsAcrossRulesAndOptions_ReportsEveryProblemInOneMessage()
+    {
+        var path = WriteConfig("""
+            {
+              "rules": {
+                "drop-tabel": "warning",
+                "drop-column": "danger"
+              },
+              "options": {
+                "add-column-with-default": {
+                  "exemptTablePatterns": ["[unclosed", "^ok$", "(also-bad"],
+                  "exemptTabelPatterns": ["^typo$"]
+                },
+                "drop-table": { "exemptTablePatterns": ["^x$"] },
+                "ML999": {}
+              }
+            }
+            """);
+
+        var ex = Assert.Throws<InvalidOperationException>(() => LintConfig.Load(path));
+
+        Assert.Contains("Unknown rule id 'drop-tabel'", ex.Message);
+        Assert.Contains("invalid severity 'danger'", ex.Message);
+        Assert.Contains("pattern '[unclosed' is not a valid regular expression", ex.Message);
+        Assert.Contains("pattern '(also-bad' is not a valid regular expression", ex.Message);
+        Assert.Contains("Unknown option 'exemptTabelPatterns' for rule 'add-column-with-default'", ex.Message);
+        Assert.Contains("Rule 'drop-table' does not accept options", ex.Message);
+        Assert.Contains("Unknown rule id 'ML999'", ex.Message);
+    }
+
+    [Fact]
+    public void Load_OptionsNotAnObject_ThrowsWithProblem()
+    {
+        var path = WriteConfig("{ \"options\": [] }");
+
+        var ex = Assert.Throws<InvalidOperationException>(() => LintConfig.Load(path));
+
+        Assert.Contains("'options' must be an object keyed by rule id, but was []", ex.Message);
+    }
+
+    [Fact]
+    public void Load_RuleOptionsNotAnObject_ThrowsWithProblem()
+    {
+        var path = WriteConfig("{ \"options\": { \"add-column-with-default\": \"yes\" } }");
+
+        var ex = Assert.Throws<InvalidOperationException>(() => LintConfig.Load(path));
+
+        Assert.Contains("Options for rule 'add-column-with-default' must be an object, but was \"yes\"", ex.Message);
+    }
+
+    [Fact]
+    public void Load_ExemptTablePatternsNotAnArray_ThrowsWithProblem()
+    {
+        var path = WriteConfig("{ \"options\": { \"add-column-with-default\": { \"exemptTablePatterns\": \"^Audit$\" } } }");
+
+        var ex = Assert.Throws<InvalidOperationException>(() => LintConfig.Load(path));
+
+        Assert.Contains("Option 'exemptTablePatterns' of rule 'add-column-with-default' must be an array of strings, but was \"^Audit$\"", ex.Message);
+    }
+
+    [Fact]
+    public void Load_ExemptTablePatternNotAString_ThrowsWithProblem()
+    {
+        var path = WriteConfig("{ \"options\": { \"add-column-with-default\": { \"exemptTablePatterns\": [42] } } }");
+
+        var ex = Assert.Throws<InvalidOperationException>(() => LintConfig.Load(path));
+
+        Assert.Contains("at index 0: the pattern must be a string, but was 42", ex.Message);
+    }
+
+    [Fact]
+    public void Load_EmptyExemptTablePattern_ThrowsWithProblem()
+    {
+        var path = WriteConfig("{ \"options\": { \"add-column-with-default\": { \"exemptTablePatterns\": [\"\"] } } }");
+
+        var ex = Assert.Throws<InvalidOperationException>(() => LintConfig.Load(path));
+
+        Assert.Contains("would exempt every table", ex.Message);
+    }
+
     private string WriteConfig(string json)
     {
         var path = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N") + ".json");
