@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace SqlMigrationLint;
 
@@ -18,6 +20,23 @@ internal static class LintRuleRegistry
     /// Gets the collection of global lint rules.
     /// </summary>
     public static IReadOnlyList<IGlobalLintRule> GlobalRules { get; } = CreateGlobalRules();
+
+    /// <summary>
+    /// Gets the sorted, distinct ids of every rule the built-in linter can evaluate, including the global rule
+    /// that <see cref="MigrationLinter.CreateDefaultWithGlobalRules"/> adds. Used to validate configuration keys.
+    /// </summary>
+    public static IReadOnlyList<string> RuleNames { get; } = CreateRuleNames();
+
+    private static IReadOnlyList<string> CreateRuleNames()
+    {
+        return PerOperationRules.Select(rule => rule.Name)
+            .Concat(PerFileRules.Select(rule => rule.RuleName))
+            .Concat(GlobalRules.Select(rule => rule.Name))
+            .Append(DuplicateMigrationVersionRule.Instance.Name)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
 
     private static IReadOnlyList<ILintRule> CreatePerOperationRules()
     {

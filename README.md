@@ -127,6 +127,8 @@ To disable the check for the whole project, put this in `.sqlmigrationlint.json`
 }
 ```
 
+The configuration is checked when it loads. An unknown rule id, or a severity other than `off`, `warning` or `error`, stops the run with exit code `1`. The message lists the valid rule ids and severity values.
+
 ## Command-line options
 
 ```text

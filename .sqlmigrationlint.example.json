@@ -4,8 +4,8 @@
     "drop-table": "warning",
     "drop-column": "error",
     "drop-index": "warning",
-    "rename-column": "danger",
-    "rename-table": "danger",
+    "rename-column": "error",
+    "rename-table": "error",
     "delete-data": "off",
     "drop-database-object": "error",
     "add-column-with-default": "warning",
@@ -15,8 +15,8 @@
     "nullable-false-without-default": "error",
     "add-not-null-without-default": "error",
     "non-concurrent-index": "warning",
-    "empty-down": "warning",
-    "missing-where": "warning",
+    "ML100": "warning",
+    "ML101": "warning",
     "ML103": "warning"
   }
 }
