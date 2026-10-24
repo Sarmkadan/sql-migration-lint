@@ -38,6 +38,11 @@ public sealed class LintConfig
     public Dictionary<string, RuleSeverityConfig> Rules { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
+    /// Gets or sets the per-rule options, read from the <c>options</c> section keyed by rule id.
+    /// </summary>
+    public LintRuleOptions Options { get; set; } = new();
+
+    /// <summary>
     /// Loads configuration from a .sqlmigrationlint.json file and validates it once, at load time.
     /// If the file doesn't exist, returns null (use default configuration).
     /// </summary>
@@ -65,8 +70,11 @@ public sealed class LintConfig
                 CommentHandling = JsonCommentHandling.Skip
             });
 
-            // Rules are checked before binding: binding would fail on the first bad severity without naming the allowed set.
-            problems = LintConfigValidation.ValidateRules(document.RootElement).ToList();
+            // Rules and options are checked before binding: binding would fail on the first bad value without naming
+            // the allowed set, and would hide the other problems. Both checks run, so their problems are reported together.
+            problems = LintConfigValidation.ValidateRules(document.RootElement)
+                .Concat(LintConfigValidation.ValidateOptions(document.RootElement))
+                .ToList();
             if (problems.Count == 0)
             {
                 config = document.RootElement.Deserialize<LintConfig>(new JsonSerializerOptions

@@ -2,8 +2,19 @@ namespace SqlMigrationLint;
 
 internal static class LockHeavyOperationRules
 {
-    public static IReadOnlyList<ILintRule> All => [
-        AddColumnWithDefaultRule.Instance,
+    public static IReadOnlyList<ILintRule> All => Create(addColumnWithDefaultOptions: null);
+
+    /// <summary>
+    /// Creates the lock-heavy rule set, using the supplied options for rules that accept them.
+    /// </summary>
+    /// <param name="addColumnWithDefaultOptions">
+    /// Options for <see cref="AddColumnWithDefaultRule"/>, or null to use the shared default instance.
+    /// </param>
+    /// <returns>The rules, in the same order as <see cref="All"/>.</returns>
+    public static IReadOnlyList<ILintRule> Create(AddColumnWithDefaultOptions? addColumnWithDefaultOptions) => [
+        addColumnWithDefaultOptions is null
+            ? AddColumnWithDefaultRule.Instance
+            : new AddColumnWithDefaultRule(addColumnWithDefaultOptions),
         AlterColumnTypeChangeRule.Instance,
         DataLossAlterColumnRule.Instance,
         CreateIndexWithoutConcurrentRule.Instance,

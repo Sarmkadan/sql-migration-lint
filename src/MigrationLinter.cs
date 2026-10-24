@@ -58,7 +58,7 @@ public sealed class MigrationLinter
     {
         var config = configPath != null ? LintConfig.Load(configPath) : null;
         return new MigrationLinter(
-            perOperationRules: LintRuleRegistry.PerOperationRules,
+            perOperationRules: LintRuleRegistry.CreatePerOperationRules(config?.Options),
             globalRules: LintRuleRegistry.GlobalRules,
             config: config,
             perFileRules: LintRuleRegistry.PerFileRules);
@@ -75,7 +75,7 @@ public sealed class MigrationLinter
         globalRules.Add(DuplicateMigrationVersionRule.Instance);
 
         return new MigrationLinter(
-            perOperationRules: LintRuleRegistry.PerOperationRules,
+            perOperationRules: LintRuleRegistry.CreatePerOperationRules(config?.Options),
             globalRules: globalRules,
             config: config,
             perFileRules: LintRuleRegistry.PerFileRules);

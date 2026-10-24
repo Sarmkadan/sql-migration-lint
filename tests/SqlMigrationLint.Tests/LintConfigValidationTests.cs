@@ -144,6 +144,65 @@ public class LintConfigValidationTests
         Assert.Empty(LintConfigValidation.ValidateRules(Parse("[]")));
     }
 
+    [Fact]
+    public void Validate_InvalidExemptTablePattern_ReturnsProblem()
+    {
+        var config = new LintConfig
+        {
+            Options = new LintRuleOptions
+            {
+                AddColumnWithDefault = new AddColumnWithDefaultOptions { ExemptTablePatterns = ["Audit(" ] }
+            }
+        };
+
+        var problem = Assert.Single(config.Validate());
+        Assert.Contains("pattern 'Audit(' is not a valid regular expression", problem);
+    }
+
+    [Fact]
+    public void ValidateOptions_ValidOptions_ReturnsNoProblems()
+    {
+        var root = Parse("{\"options\":{\"add-column-with-default\":{\"exemptTablePatterns\":[\"^Audit_\"]}}}");
+
+        Assert.Empty(LintConfigValidation.ValidateOptions(root));
+    }
+
+    [Fact]
+    public void ValidateOptions_NoOptionsSection_ReturnsNoProblems()
+    {
+        Assert.Empty(LintConfigValidation.ValidateOptions(Parse("{\"rules\":{}}")));
+    }
+
+    [Fact]
+    public void ValidateOptions_NonObjectRoot_ReturnsNoProblems()
+    {
+        // Structural errors are reported by deserialization, not by this check.
+        Assert.Empty(LintConfigValidation.ValidateOptions(Parse("[]")));
+    }
+
+    [Fact]
+    public void ValidateOptions_UnknownOptionName_ReportsNameAndAllowedOptions()
+    {
+        var root = Parse("{\"options\":{\"add-column-with-default\":{\"exemptTablePattern\":[]}}}");
+
+        var problem = Assert.Single(LintConfigValidation.ValidateOptions(root));
+        Assert.Contains("Unknown option 'exemptTablePattern'", problem);
+        Assert.Contains("Allowed options: exemptTablePatterns", problem);
+    }
+
+    [Fact]
+    public void ValidateOptions_EveryBadPatternReported()
+    {
+        var root = Parse("{\"options\":{\"add-column-with-default\":{\"exemptTablePatterns\":[\"(\",\"^ok$\",\"[\",\"\"]}}}");
+
+        var problems = LintConfigValidation.ValidateOptions(root);
+
+        Assert.Equal(3, problems.Count);
+        Assert.Contains(problems, p => p.Contains("index 0") && p.Contains("pattern '('"));
+        Assert.Contains(problems, p => p.Contains("index 2") && p.Contains("pattern '['"));
+        Assert.Contains(problems, p => p.Contains("index 3") && p.Contains("empty or whitespace"));
+    }
+
     private static JsonElement Parse(string json)
     {
         using var document = JsonDocument.Parse(json);

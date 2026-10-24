@@ -117,6 +117,49 @@ public sealed class AddColumnWithDefaultIntegrationTests : IDisposable
     /// Writes a realistic EF Core migration whose <c>Up</c> runs the given SQL statements through
     /// <c>migrationBuilder.Sql</c>, and whose <c>Down</c> is non-empty so unrelated rules stay quiet.
     /// </summary>
+    [Fact]
+    public void Lint_ExemptTableFromConfig_ReportsOnlyNonExemptTable()
+    {
+        WriteMigration("20261024100000_AddAuditFlag", new[]
+        {
+            "ALTER TABLE \"Audit_Events\" ADD COLUMN \"Flag\" integer NOT NULL DEFAULT 0;"
+        });
+        WriteMigration("20261024100100_AddOrderStatus", new[]
+        {
+            "ALTER TABLE \"Orders\" ADD COLUMN \"Status\" integer NOT NULL DEFAULT 0;"
+        });
+        var configPath = WriteConfig("""
+            {
+              "rules": { "add-column-with-default": "warning" },
+              "options": {
+                "add-column-with-default": { "exemptTablePatterns": ["^Audit_"] }
+              }
+            }
+            """);
+
+        var report = MigrationLinter.CreateDefault(configPath).Lint(_root);
+
+        var finding = Assert.Single(report.Findings, f => f.RuleName == RuleId);
+        Assert.Contains("'Orders'", finding.Message);
+    }
+
+    [Fact]
+    public void CreateDefault_InvalidExemptPatternInConfig_ThrowsBeforeLinting()
+    {
+        var configPath = WriteConfig("{ \"options\": { \"add-column-with-default\": { \"exemptTablePatterns\": [\"Audit(\"] } } }");
+
+        var ex = Assert.Throws<InvalidOperationException>(() => MigrationLinter.CreateDefault(configPath));
+
+        Assert.Contains("pattern 'Audit(' is not a valid regular expression", ex.Message);
+    }
+
+    private string WriteConfig(string json)
+    {
+        var path = Path.Combine(_root, ".sqlmigrationlint.json");
+        File.WriteAllText(path, json);
+        return path;
+    }
+
     private string WriteMigration(string fileName, IEnumerable<string> upStatements)
     {
         var className = fileName.Substring(fileName.IndexOf('_') + 1);
