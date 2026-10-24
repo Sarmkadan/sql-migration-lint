@@ -17,6 +17,7 @@ public static class Program
     private const string TextFormatName = "text";
     private const string JsonFormatName = "json";
     private const string GitHubFormatName = "github";
+    private const string SarifFormatName = "sarif";
     private const string DesignerFileSuffix = ".Designer.cs";
     private const string SnapshotFileNameFragment = "Snapshot";
     private const string CSharpFileSearchPattern = "*.cs";
@@ -49,11 +50,11 @@ public static class Program
 
         var onlyLatestOption = new Option<int?>("--only-latest", "Lint only the last n migrations.");
 
-        // New format option – supports "text" (default), "json", and "github"
+        // New format option – supports "text" (default), "json", "github", and "sarif"
         var formatOption = new Option<string>(
             "--format",
             () => TextFormatName,
-            $"Output format. Supported values: {TextFormatName}, {JsonFormatName}, {GitHubFormatName}.");
+            $"Output format. Supported values: {TextFormatName}, {JsonFormatName}, {GitHubFormatName}, {SarifFormatName}.");
 
         var configOption = new Option<string?>("--config", "Path to .sqlmigrationlint.json configuration file.");
 
@@ -131,6 +132,7 @@ public static class Program
             {
                 JsonFormatName => new JsonReportWriter(indented: true),
                 GitHubFormatName => new GitHubAnnotationsWriter(),
+                SarifFormatName => new SarifReportWriter(),
                 _ => new ConsoleReportWriterAdapter()
             };
 
