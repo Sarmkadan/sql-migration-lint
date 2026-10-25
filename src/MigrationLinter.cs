@@ -145,7 +145,7 @@ public sealed class MigrationLinter
             {
                 File = file,
                 Line = 1,
-                Sql = migrationFile.UpBody ?? string.Empty
+                Sql = SqlCommentStripper.Strip(migrationFile.UpBody)
             };
 
             EvaluatePerOperationRules(findings, sqlOperation);

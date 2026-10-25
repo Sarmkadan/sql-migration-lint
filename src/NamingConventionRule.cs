@@ -114,7 +114,7 @@ public sealed class NamingConventionRule : ILintRule, IPerFileLintRule
         {
             File = file.FilePath,
             Line = 1,
-            Sql = file.UpBody ?? string.Empty
+            Sql = SqlCommentStripper.Strip(file.UpBody)
         };
 
         var finding = Evaluate(sqlOperation);

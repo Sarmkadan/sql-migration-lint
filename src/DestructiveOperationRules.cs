@@ -85,7 +85,7 @@ public static class DestructiveOperationRules
         public IEnumerable<LintFinding> Check(MigrationFile file, LintConfig? config)
         {
             ArgumentNullException.ThrowIfNull(file);
-            var sqlOp = new SqlOperation { File = file.FilePath, Line = 1, Sql = file.UpBody ?? string.Empty };
+            var sqlOp = new SqlOperation { File = file.FilePath, Line = 1, Sql = SqlCommentStripper.Strip(file.UpBody) };
             return AppliesTo(sqlOp) && Evaluate(sqlOp) is { } finding ? [finding] : [];
         }
     }
@@ -153,7 +153,7 @@ public static class DestructiveOperationRules
         public IEnumerable<LintFinding> Check(MigrationFile file, LintConfig? config)
         {
             ArgumentNullException.ThrowIfNull(file);
-            var sqlOp = new SqlOperation { File = file.FilePath, Line = 1, Sql = file.UpBody ?? string.Empty };
+            var sqlOp = new SqlOperation { File = file.FilePath, Line = 1, Sql = SqlCommentStripper.Strip(file.UpBody) };
             return AppliesTo(sqlOp) && Evaluate(sqlOp) is { } finding ? [finding] : [];
         }
     }
@@ -221,7 +221,7 @@ public static class DestructiveOperationRules
         public IEnumerable<LintFinding> Check(MigrationFile file, LintConfig? config)
         {
             ArgumentNullException.ThrowIfNull(file);
-            var sqlOp = new SqlOperation { File = file.FilePath, Line = 1, Sql = file.UpBody ?? string.Empty };
+            var sqlOp = new SqlOperation { File = file.FilePath, Line = 1, Sql = SqlCommentStripper.Strip(file.UpBody) };
             return AppliesTo(sqlOp) && Evaluate(sqlOp) is { } finding ? [finding] : [];
         }
     }
@@ -289,7 +289,7 @@ public static class DestructiveOperationRules
         public IEnumerable<LintFinding> Check(MigrationFile file, LintConfig? config)
         {
             ArgumentNullException.ThrowIfNull(file);
-            var sqlOp = new SqlOperation { File = file.FilePath, Line = 1, Sql = file.UpBody ?? string.Empty };
+            var sqlOp = new SqlOperation { File = file.FilePath, Line = 1, Sql = SqlCommentStripper.Strip(file.UpBody) };
             return AppliesTo(sqlOp) && Evaluate(sqlOp) is { } finding ? [finding] : [];
         }
     }
@@ -357,7 +357,7 @@ public static class DestructiveOperationRules
         public IEnumerable<LintFinding> Check(MigrationFile file, LintConfig? config)
         {
             ArgumentNullException.ThrowIfNull(file);
-            var sqlOp = new SqlOperation { File = file.FilePath, Line = 1, Sql = file.UpBody ?? string.Empty };
+            var sqlOp = new SqlOperation { File = file.FilePath, Line = 1, Sql = SqlCommentStripper.Strip(file.UpBody) };
             return AppliesTo(sqlOp) && Evaluate(sqlOp) is { } finding ? [finding] : [];
         }
     }
@@ -425,7 +425,7 @@ public static class DestructiveOperationRules
         public IEnumerable<LintFinding> Check(MigrationFile file, LintConfig? config)
         {
             ArgumentNullException.ThrowIfNull(file);
-            var sqlOp = new SqlOperation { File = file.FilePath, Line = 1, Sql = file.UpBody ?? string.Empty };
+            var sqlOp = new SqlOperation { File = file.FilePath, Line = 1, Sql = SqlCommentStripper.Strip(file.UpBody) };
             return AppliesTo(sqlOp) && Evaluate(sqlOp) is { } finding ? [finding] : [];
         }
     }
@@ -493,7 +493,7 @@ public static class DestructiveOperationRules
         public IEnumerable<LintFinding> Check(MigrationFile file, LintConfig? config)
         {
             ArgumentNullException.ThrowIfNull(file);
-            var sqlOp = new SqlOperation { File = file.FilePath, Line = 1, Sql = file.UpBody ?? string.Empty };
+            var sqlOp = new SqlOperation { File = file.FilePath, Line = 1, Sql = SqlCommentStripper.Strip(file.UpBody) };
             return AppliesTo(sqlOp) && Evaluate(sqlOp) is { } finding ? [finding] : [];
         }
     }
