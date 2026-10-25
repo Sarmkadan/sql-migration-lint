@@ -45,7 +45,10 @@ internal static class AddColumnOperationExtractor
             return operations;
         }
 
-        foreach (Match statement in AddColumnStatement.Matches(file.UpBody))
+        // Commented-out ADD COLUMN statements must not be extracted; stripping keeps offsets and line breaks intact.
+        string strippedUpBody = SqlCommentStripper.Strip(file.UpBody);
+
+        foreach (Match statement in AddColumnStatement.Matches(strippedUpBody))
         {
             var definition = statement.Groups["definition"].Value;
             var defaultMatch = DefaultClause.Match(definition);
@@ -54,7 +57,7 @@ internal static class AddColumnOperationExtractor
                 continue;
             }
 
-            int linesBeforeStatement = file.UpBody.Substring(0, statement.Index).Count(c => c == '\n');
+            int linesBeforeStatement = strippedUpBody.Substring(0, statement.Index).Count(c => c == '\n');
 
             operations.Add(new AddColumnOperation
             {

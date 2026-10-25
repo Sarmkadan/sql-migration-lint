@@ -68,11 +68,24 @@ public sealed class DropTableIntegrationTests : IDisposable
         Assert.Equal(path, finding.File);
     }
 
-    // Known gap: DropTableRule matches its regex against the raw Up body, so comments and string literals are not
-    // excluded. Remove the Skip once the rule strips SQL/C# comments and literals before matching.
-    [Theory(Skip = "Known gap: drop-table has no comment/string-literal awareness (regex over raw Up body).")]
+    [Theory]
     [InlineData("-- DROP TABLE \"Orders\";")]
     [InlineData("/* DROP TABLE \"Orders\"; */")]
+    public void Lint_DropTableInsideSqlComment_ReportsNoFinding(string statement)
+    {
+        WriteMigration("20261024110000_NoteAboutDrop", new[]
+        {
+            statement,
+            "CREATE TABLE \"Notes\" (\"Id\" integer PRIMARY KEY, \"Body\" text NOT NULL);"
+        });
+
+        var report = MigrationLinter.CreateDefault().Lint(_root);
+
+        Assert.DoesNotContain(report.Findings, f => f.RuleName == RuleId);
+    }
+
+    // Known gap: string literals are not blanked, so DROP TABLE text inside '...' still matches. Only comments are stripped.
+    [Theory(Skip = "Known gap: drop-table does not exclude string-literal contents (only comments are stripped).")]
     [InlineData("INSERT INTO \"Notes\" (\"Body\") VALUES ('DROP TABLE \"Orders\";');")]
     public void Lint_DropTableOnlyInsideCommentOrStringLiteral_ReportsNoFinding(string statement)
     {
