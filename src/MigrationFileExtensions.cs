@@ -132,6 +132,18 @@ namespace SqlMigrationLint
         }
 
         /// <summary>
+        /// Checks if the migration declares a Down method whose body could be located, even when that body is empty.
+        /// </summary>
+        /// <param name="file">The migration file.</param>
+        /// <returns>True if a Down method was located; otherwise, false.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="file"/> is null.</exception>
+        public static bool HasDownSection(this MigrationFile file)
+        {
+            ArgumentNullException.ThrowIfNull(file);
+            return file.DownBody is not null;
+        }
+
+        /// <summary>
         /// Gets the total number of SQL statements in the migration.
         /// </summary>
         /// <param name="file">The migration file.</param>
@@ -141,6 +153,37 @@ namespace SqlMigrationLint
         {
             ArgumentNullException.ThrowIfNull(file);
             return GetUpSqlStatements(file).Count() + GetDownSqlStatements(file).Count();
+        }
+
+        /// <summary>
+        /// Gets the number of SQL statements in the Up and Down bodies, ignoring SQL comments so that
+        /// commented-out statements are not counted.
+        /// </summary>
+        /// <param name="file">The migration file.</param>
+        /// <returns>The count of non-empty SQL statements once comments are removed.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="file"/> is null.</exception>
+        public static int StatementCount(this MigrationFile file)
+        {
+            ArgumentNullException.ThrowIfNull(file);
+            return GetSqlStatements(SqlCommentStripper.Strip(file.UpBody)).Count()
+                + GetSqlStatements(SqlCommentStripper.Strip(file.DownBody)).Count();
+        }
+
+        /// <summary>
+        /// Checks if the Up body yields an operation of type <typeparamref name="TOperation"/> that satisfies the optional predicate.
+        /// </summary>
+        /// <typeparam name="TOperation">The operation type to look for, such as <see cref="SqlOperation"/> or <see cref="AddColumnOperation"/>.</typeparam>
+        /// <param name="file">The migration file.</param>
+        /// <param name="predicate">An optional filter; when null, any operation of the requested type matches.</param>
+        /// <returns>True if a matching operation exists; otherwise, false.</returns>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="file"/> is null.</exception>
+        public static bool ContainsOperation<TOperation>(this MigrationFile file, Func<TOperation, bool>? predicate = null)
+            where TOperation : MigrationOperation
+        {
+            ArgumentNullException.ThrowIfNull(file);
+            return GetUpOperations(file)
+                .OfType<TOperation>()
+                .Any(operation => predicate?.Invoke(operation) ?? true);
         }
 
         /// <summary>
@@ -208,6 +251,28 @@ namespace SqlMigrationLint
             ArgumentNullException.ThrowIfNull(file);
             ArgumentNullException.ThrowIfNull(keywords);
             return CountKeywords(file.DownBody, keywords);
+        }
+
+        /// <summary>
+        /// Builds the operations for the Up body the same way <see cref="MigrationLinter"/> does: one comment-stripped
+        /// <see cref="SqlOperation"/> plus the <see cref="AddColumnOperation"/> instances extracted from it.
+        /// </summary>
+        private static IEnumerable<MigrationOperation> GetUpOperations(MigrationFile file)
+        {
+            if (file.UpBody is not null)
+            {
+                yield return new SqlOperation
+                {
+                    File = file.FilePath,
+                    Line = 1,
+                    Sql = SqlCommentStripper.Strip(file.UpBody)
+                };
+            }
+
+            foreach (AddColumnOperation addColumn in AddColumnOperationExtractor.Extract(file))
+            {
+                yield return addColumn;
+            }
         }
 
         private static IEnumerable<string> GetSqlStatements(string? body)
